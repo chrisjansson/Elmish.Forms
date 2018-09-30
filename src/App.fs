@@ -49,7 +49,7 @@ module Form =
         |> Option.defaultValue []
 
     let hasValidationError (id: FieldId) (model: Model): bool =
-        getValidationErrors id model |> List.isEmpty
+        getValidationErrors id model |> List.isEmpty |> not
 
 
 let firstNameId = FieldId.create "firstName"
@@ -108,6 +108,15 @@ let view (model:Model) dispatch =
     let onSubmit (event: Fable.Import.React.FormEvent) = 
         event.preventDefault()
         dispatch Submit    
+
+    let validationLabelFor (fieldId: FieldId) (model: Model) =    
+        if Form.hasValidationError fieldId model then
+            let message = 
+                Form.getValidationErrors fieldId model
+                |> List.reduce (fun acc v -> acc + " " + v)
+            label [] [ unbox message ]
+        else 
+            fragment [] []
     
     div []
         [
@@ -115,10 +124,12 @@ let view (model:Model) dispatch =
                 div [] [
                     label [] [ unbox "First name" ]
                     input [ Form.getField firstNameId model |> Value; onChange "firstName" |> OnChange ]
+                    validationLabelFor firstNameId model
                 ]
                 div [] [
                     label [] [ unbox "Last name" ]
                     input [ Form.getField lastNameId model |> Value; onChange "lastName" |> OnChange ]
+                    validationLabelFor lastNameId model 
                 ]
                 button [ Type "submit" ] [ unbox "Submit" ]
             ]
