@@ -14,6 +14,7 @@ type KeyedValidationError = FieldId * ValidationError
 type Person = {
     FirstName: string
     LastName: string
+    Age: int
 }
 
 type Model =
@@ -54,6 +55,12 @@ module Form =
 
 let firstNameId = FieldId.create "firstName"
 let lastNameId = FieldId.create "lastName"
+let ageId = FieldId.create "age"
+
+let tryParseInt (s: string) =
+    match System.Int32.TryParse(s) with
+    | (true, i) -> Some i
+    | _ -> None
 
 let validate (model: Model): KeyedValidationError list = 
     let validateFirstName (model: Model): KeyedValidationError list =
@@ -64,14 +71,27 @@ let validate (model: Model): KeyedValidationError list =
         let value = Form.getField lastNameId model
         if value.Length < 1 || value.[0] <> 'a' then [ (lastNameId, "Last name must begin with 'a'") ]
         else []        
-    List.concat [ validateFirstName model; validateLastName model]    
+    let validateAge (model: Model): KeyedValidationError list =
+        let value = Form.getField ageId model
+        match tryParseInt value with 
+        | Some age -> 
+            if age <= 50 then
+                [ (ageId, "Age must be above 50") ]
+            else 
+                []            
+        | None -> [ (ageId, "Age must be a number") ]
+    List.concat [ validateFirstName model; validateLastName model; validateAge model ]    
 
 let composeResult (model: Model): Person =  
     let firstName = Form.getField firstNameId model
     let lastName = Form.getField lastNameId model
+    let age = 
+        Form.getField lastNameId model
+        |> System.Int32.Parse
     {
         FirstName = firstName
         LastName = lastName
+        Age = age
     }
 
 let update (msg:Msg) (model:Model) =
@@ -123,13 +143,18 @@ let view (model:Model) dispatch =
             form [ OnSubmit onSubmit ] [
                 div [] [
                     label [] [ unbox "First name" ]
-                    input [ Form.getField firstNameId model |> Value; onChange "firstName" |> OnChange ]
+                    input [ Form.getField firstNameId model |> Value; onChange firstNameId |> OnChange ]
                     validationLabelFor firstNameId model
                 ]
                 div [] [
                     label [] [ unbox "Last name" ]
-                    input [ Form.getField lastNameId model |> Value; onChange "lastName" |> OnChange ]
+                    input [ Form.getField lastNameId model |> Value; onChange lastNameId |> OnChange ]
                     validationLabelFor lastNameId model 
+                ]
+                div [] [
+                    label [] [ unbox "Age" ]
+                    input [ Form.getField ageId model |> Value; onChange ageId |> OnChange ]
+                    validationLabelFor ageId model 
                 ]
                 button [ Type "submit" ] [ unbox "Submit" ]
             ]
