@@ -6,10 +6,21 @@ open Fable.Helpers.React
 open Fable.Helpers.React.Props
 open Fable.Core.JsInterop
 
+type ResultBuilder() =
+    member this.Bind(x, f) =
+        match x with
+        | Ok x -> f(x) 
+        | Error e -> Error e
+    member this.Delay(f) = f()
+    member this.Return(x) = Ok x
+
+let result = new ResultBuilder()
+
 type Field = string
 type FieldId = string
 type ValidationError = string
 type KeyedValidationError = FieldId * ValidationError
+type ValidationResult<'a> = Result<'a, KeyedValidationError list>
 
 type Person = {
     FirstName: string
@@ -62,36 +73,35 @@ let tryParseInt (s: string) =
     | (true, i) -> Some i
     | _ -> None
 
-let validate (model: Model): KeyedValidationError list = 
-    let validateFirstName (model: Model): KeyedValidationError list =
+let validate (model: Model): ValidationResult<Person> = 
+    let validateFirstName (model: Model): ValidationResult<string> =
         let value = Form.getField firstNameId model
-        if value.Length < 3 then [ (firstNameId, "First name must be at least 3 characters") ]
-        else []        
-    let validateLastName (model: Model): KeyedValidationError list =
+        if value.Length < 3 then 
+            Error [ (firstNameId, "First name must be at least 3 characters") ]
+        else 
+            Ok value
+    let validateLastName (model: Model): ValidationResult<string> =
         let value = Form.getField lastNameId model
-        if value.Length < 1 || value.[0] <> 'a' then [ (lastNameId, "Last name must begin with 'a'") ]
-        else []        
-    let validateAge (model: Model): KeyedValidationError list =
+        if value.Length < 1 || value.[0] <> 'a' then 
+            Error [ (lastNameId, "Last name must begin with 'a'") ]
+        else         
+            Ok value
+    let validateAge (model: Model): ValidationResult<int> =
         let value = Form.getField ageId model
         match tryParseInt value with 
         | Some age -> 
             if age <= 50 then
-                [ (ageId, "Age must be above 50") ]
+                Error [ (ageId, "Age must be above 50") ]
             else 
-                []            
-        | None -> [ (ageId, "Age must be a number") ]
-    List.concat [ validateFirstName model; validateLastName model; validateAge model ]    
+                Ok age            
+        | None -> Error [ (ageId, "Age must be a number") ]
 
-let composeResult (model: Model): Person =  
-    let firstName = Form.getField firstNameId model
-    let lastName = Form.getField lastNameId model
-    let age = 
-        Form.getField lastNameId model
-        |> System.Int32.Parse
-    {
-        FirstName = firstName
-        LastName = lastName
-        Age = age
+    result {
+        let! firstName = validateFirstName model    
+        let! lastName = validateLastName model
+        let! age = validateAge model
+
+        return { FirstName = firstName; LastName = lastName; Age = age }
     }
 
 let update (msg:Msg) (model:Model) =
