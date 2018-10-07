@@ -35,9 +35,12 @@ type Model =
         Result: Person option
     }
 
+type Validator<'a> = (Model -> ValidationResult<'a>)
+
 type Msg =
     | InputChanged of FieldId * string
     | Submit
+
 
 let init() : Model = {
     Fields = Map.empty
@@ -105,7 +108,7 @@ let validate (model: Model): ValidationResult<Person> =
     }
 
 let update (msg:Msg) (model:Model) =
-    let validateModel (validate: Model -> ValidationResult<Person>) (model: Model) = 
+    let validateModel (validate: Validator<Person>) (model: Model) = 
         let validationResult = validate model 
         let appendError (map: Map<FieldId, ValidationError list>) (error: KeyedValidationError): Map<FieldId, ValidationError list> =
             let key = fst error
