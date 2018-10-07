@@ -105,8 +105,8 @@ let validate (model: Model): ValidationResult<Person> =
     }
 
 let update (msg:Msg) (model:Model) =
-    let updateValidation validate (model: Model) = 
-        let validationErrors = validate model 
+    let validateModel (validate: Model -> ValidationResult<Person>) (model: Model) = 
+        let validationResult = validate model 
         let appendError (map: Map<FieldId, ValidationError list>) (error: KeyedValidationError): Map<FieldId, ValidationError list> =
             let key = fst error
             let validationError = snd error
@@ -116,19 +116,19 @@ let update (msg:Msg) (model:Model) =
             else
                 Map.add key [ validationError ] map
         let validationErrorMap = 
-            validationErrors 
-            |> List.fold appendError Map.empty 
+            match validationResult with
+            | Ok _ -> Map.empty
+            | Error validationErrors -> validationErrors |> List.fold appendError Map.empty 
         { model with ValidationErrors = validationErrorMap }
 
     match msg with
     | InputChanged (id, value) -> 
         let model = { model with Fields = Map.add id value model.Fields }
-        updateValidation validate model
+        validateModel validate model
     | Submit -> 
-        if Map.isEmpty model.ValidationErrors then
-            { model with Result = Some <| composeResult model }
-        else        
-            { model with Result = None }
+        match validate model with
+        | Ok r -> { model with Result = Some r }
+        | Error _ -> { model with Result = None }
 
 let view (model:Model) dispatch =
     let onChange field (event: Fable.Import.React.FormEvent) =
