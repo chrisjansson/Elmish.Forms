@@ -66,6 +66,19 @@ module Form =
     let hasValidationError (id: FieldId) (model: Model): bool =
         getValidationErrors id model |> List.isEmpty |> not
 
+module Result =
+    // M(a -> b) -> M a -> M b
+    let apply fr ar =
+        match (fr, ar) with
+        | (Ok f, Ok a) -> f a |> Ok
+        | (Error e, Ok _) -> Error e
+        | (Ok _, Error e) -> Error e
+        | (Error e1, Error e2) -> List.concat [ e1; e2 ] |> Error
+
+    let ret a = Ok a    
+
+    let lift3 f a b c =
+        apply (apply (apply (ret f) a) b) c
 
 let firstNameId = FieldId.create "firstName"
 let lastNameId = FieldId.create "lastName"
@@ -99,13 +112,16 @@ let validate (model: Model): ValidationResult<Person> =
                 Ok age            
         | None -> Error [ (ageId, "Age must be a number") ]
 
-    result {
-        let! firstName = validateFirstName model    
-        let! lastName = validateLastName model
-        let! age = validateAge model
+    let createPerson firstName lastName age =
+        { FirstName = firstName; LastName = lastName; Age = age }    
 
-        return { FirstName = firstName; LastName = lastName; Age = age }
-    }
+    let createPersonA = Result.lift3 createPerson
+
+    let firstName = validateFirstName model    
+    let lastName = validateLastName model
+    let age = validateAge model
+
+    createPersonA firstName lastName age
 
 let update (msg:Msg) (model:Model) =
     let validateModel (validate: Validator<Person>) (model: Model) = 
