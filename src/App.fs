@@ -75,10 +75,12 @@ module Result =
         | (Ok _, Error e) -> Error e
         | (Error e1, Error e2) -> List.concat [ e1; e2 ] |> Error
 
+    let (<*>) f a = apply f a
+
     let ret a = Ok a    
 
-    let lift3 f a b c =
-        apply (apply (apply (ret f) a) b) c
+    let lift3 f a b c = ret f <*> a <*> b <*> c
+
 
 let firstNameId = FieldId.create "firstName"
 let lastNameId = FieldId.create "lastName"
