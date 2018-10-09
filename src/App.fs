@@ -29,7 +29,9 @@ module Result =
 
     let ret a = Ok a    
 
+    let lift2 f a b = ret f <*> a <*> b
     let lift3 f a b c = ret f <*> a <*> b <*> c
+    let lift4 f a b c d = ret f <*> a <*> b <*> c <*> d
 
 type Field = string
 type FieldId = string
@@ -41,6 +43,11 @@ type Person = {
     FirstName: string
     LastName: string
     Age: int
+    Address: Address
+}
+and Address = {
+    Address1: string
+    Address2: string
 }
 
 type Model =
@@ -81,6 +88,12 @@ module Form =
     let hasValidationError (id: FieldId) (model: Model): bool =
         getValidationErrors id model |> List.isEmpty |> not
 
+    let map2 f a b (model: Model) =
+        let fa = Result.lift2 f
+        let a' = a model
+        let b' = b model
+        fa a' b'
+
     let map3 f a b c (model: Model) =
         let fa = Result.lift3 f
         let a' = a model
@@ -88,10 +101,19 @@ module Form =
         let c' = c model
         fa a' b' c'
 
+    let map4 f a b c d (model: Model) =
+        let fa = Result.lift4 f
+        let a' = a model
+        let b' = b model
+        let c' = c model
+        let d' = d model
+        fa a' b' c' d'
 
 let firstNameId = FieldId.create "firstName"
 let lastNameId = FieldId.create "lastName"
 let ageId = FieldId.create "age"
+let address1Id = FieldId.create "address1"
+let address2Id = FieldId.create "address2"
 
 let tryParseInt (s: string) =
     match System.Int32.TryParse(s) with
@@ -120,12 +142,29 @@ let validate (model: Model): ValidationResult<Person> =
             else 
                 Ok age            
         | None -> Error [ (ageId, "Age must be a number") ]
+    let validateAddress1 (model: Model): ValidationResult<string> =
+        let value = Form.getField address1Id model
+        if value.Length > 0 then 
+            Ok value
+        else 
+            Error [ (address1Id, "Address 1 is required")]        
+    let validateAddress2 (model: Model): ValidationResult<string> =
+        let value = Form.getField address2Id model
+        if value.Length > 0 then 
+            Ok value
+        else 
+            Error [ (address2Id, "Address 2 is required")]        
 
-    let createPerson firstName lastName age =
-        { FirstName = firstName; LastName = lastName; Age = age }    
+    let createAddress address1 address2 = 
+        { Address1 = address1; Address2 = address2 }        
+
+    let createPerson firstName lastName age address =
+        { FirstName = firstName; LastName = lastName; Age = age; Address = address }    
+
+    let validateAddress = Form.map2 createAddress
 
     let validatePerson = 
-        Form.map3 createPerson validateFirstName validateLastName validateAge
+        Form.map4 createPerson validateFirstName validateLastName validateAge (validateAddress validateAddress1 validateAddress2)
 
     validatePerson model
 
@@ -190,6 +229,16 @@ let view (model:Model) dispatch =
                     label [] [ unbox "Age" ]
                     input [ Form.getField ageId model |> Value; onChange ageId |> OnChange ]
                     validationLabelFor ageId model 
+                ]
+                div [] [
+                    label [] [ unbox "Address 1" ]
+                    input [ Form.getField address1Id model |> Value; onChange address1Id |> OnChange ]
+                    validationLabelFor address1Id model 
+                ]
+                div [] [
+                    label [] [ unbox "Address 2" ]
+                    input [ Form.getField address2Id model |> Value; onChange address2Id |> OnChange ]
+                    validationLabelFor address2Id model 
                 ]
                 button [ Type "submit" ] [ unbox "Submit" ]
             ]
