@@ -16,6 +16,21 @@ type ResultBuilder() =
 
 let result = new ResultBuilder()
 
+module Result =
+    // M(a -> b) -> M a -> M b
+    let apply fr ar =
+        match (fr, ar) with
+        | (Ok f, Ok a) -> f a |> Ok
+        | (Error e, Ok _) -> Error e
+        | (Ok _, Error e) -> Error e
+        | (Error e1, Error e2) -> List.concat [ e1; e2 ] |> Error
+
+    let (<*>) f a = apply f a
+
+    let ret a = Ok a    
+
+    let lift3 f a b c = ret f <*> a <*> b <*> c
+
 type Field = string
 type FieldId = string
 type ValidationError = string
@@ -66,20 +81,12 @@ module Form =
     let hasValidationError (id: FieldId) (model: Model): bool =
         getValidationErrors id model |> List.isEmpty |> not
 
-module Result =
-    // M(a -> b) -> M a -> M b
-    let apply fr ar =
-        match (fr, ar) with
-        | (Ok f, Ok a) -> f a |> Ok
-        | (Error e, Ok _) -> Error e
-        | (Ok _, Error e) -> Error e
-        | (Error e1, Error e2) -> List.concat [ e1; e2 ] |> Error
-
-    let (<*>) f a = apply f a
-
-    let ret a = Ok a    
-
-    let lift3 f a b c = ret f <*> a <*> b <*> c
+    let map3 f a b c (model: Model) =
+        let fa = Result.lift3 f
+        let a' = a model
+        let b' = b model
+        let c' = c model
+        fa a' b' c'
 
 
 let firstNameId = FieldId.create "firstName"
@@ -117,13 +124,10 @@ let validate (model: Model): ValidationResult<Person> =
     let createPerson firstName lastName age =
         { FirstName = firstName; LastName = lastName; Age = age }    
 
-    let createPersonA = Result.lift3 createPerson
+    let validatePerson = 
+        Form.map3 createPerson validateFirstName validateLastName validateAge
 
-    let firstName = validateFirstName model    
-    let lastName = validateLastName model
-    let age = validateAge model
-
-    createPersonA firstName lastName age
+    validatePerson model
 
 let update (msg:Msg) (model:Model) =
     let validateModel (validate: Validator<Person>) (model: Model) = 
