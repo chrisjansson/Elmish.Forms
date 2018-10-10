@@ -30,6 +30,7 @@ type Model =
         ValidationErrors: Map<FieldId, ValidationError list>
         Touched: Set<FieldId>
         Result: Person option
+        Submitted: bool
     }
 
 type Validator<'a> = (Model -> ValidationResult<'a>)
@@ -44,6 +45,7 @@ let init() : Model = {
     ValidationErrors = Map.empty
     Result = None    
     Touched = Set.empty
+    Submitted = false
 }
 
 module FieldId =
@@ -148,8 +150,7 @@ let validate (model: Model): ValidationResult<Person> =
     validatePerson model
 
 let update (msg:Msg) (model:Model) =
-    let validateModel (validate: Validator<Person>) (model: Model) = 
-        let validationResult = validate model 
+    let applyValidation (model: Model) (validationResult: ValidationResult<Person>) =    
         let appendError (map: Map<FieldId, ValidationError list>) (error: KeyedValidationError): Map<FieldId, ValidationError list> =
             let key = fst error
             let validationError = snd error
@@ -164,6 +165,8 @@ let update (msg:Msg) (model:Model) =
             | Error validationErrors -> validationErrors |> List.fold appendError Map.empty 
         { model with ValidationErrors = validationErrorMap }
 
+    let validateModel (validate: Validator<Person>) (model: Model) = validate model |> applyValidation model
+
     match msg with
     | InputChanged (id, value) -> 
         let model = { model with Fields = Map.add id value model.Fields }
@@ -173,9 +176,13 @@ let update (msg:Msg) (model:Model) =
         let model = { model with Touched = touched }
         validateModel validate model
     | Submit -> 
-        match validate model with
-        | Ok r -> { model with Result = Some r }
-        | Error _ -> { model with Result = None }
+        let model = { model with Submitted = true }
+        let validationResult = validate model
+        let model = 
+            match validationResult with
+            | Ok r -> { model with Result = Some r }
+            | Error _ -> { model with Result = None }
+        applyValidation model validationResult        
 
 let view (model:Model) dispatch =
     let onChange field (event: Fable.Import.React.FormEvent) =
@@ -189,9 +196,9 @@ let view (model:Model) dispatch =
     let onBlur fieldId _ =
         Touch fieldId |> dispatch 
 
-
     let validationLabelFor (fieldId: FieldId) (model: Model) =    
-        if Form.hasValidationError fieldId model && Form.isTouched fieldId model then
+        let showValidationMessageIfPresent = Form.isTouched fieldId model || model.Submitted
+        if Form.hasValidationError fieldId model && showValidationMessageIfPresent then
             let message = 
                 Form.getValidationErrors fieldId model
                 |> List.reduce (fun acc v -> acc + " " + v)
