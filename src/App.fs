@@ -28,6 +28,7 @@ type Model =
     {
         Fields: Map<FieldId, Field>
         ValidationErrors: Map<FieldId, ValidationError list>
+        Touched: Set<FieldId>
         Result: Person option
     }
 
@@ -35,13 +36,14 @@ type Validator<'a> = (Model -> ValidationResult<'a>)
 
 type Msg =
     | InputChanged of FieldId * string
+    | Touch of FieldId
     | Submit
-
 
 let init() : Model = {
     Fields = Map.empty
     ValidationErrors = Map.empty
     Result = None    
+    Touched = Set.empty
 }
 
 module FieldId =
@@ -61,6 +63,9 @@ module Form =
 
     let hasValidationError (id: FieldId) (model: Model): bool =
         getValidationErrors id model |> List.isEmpty |> not
+
+    let isTouched (id: FieldId) (model: Model): bool =
+        Set.contains id model.Touched
 
     let map2 f a b (model: Model) =
         let fa = Result.lift2 f
@@ -163,6 +168,10 @@ let update (msg:Msg) (model:Model) =
     | InputChanged (id, value) -> 
         let model = { model with Fields = Map.add id value model.Fields }
         validateModel validate model
+    | Touch id -> 
+        let touched = Set.add id model.Touched
+        let model = { model with Touched = touched }
+        validateModel validate model
     | Submit -> 
         match validate model with
         | Ok r -> { model with Result = Some r }
@@ -177,43 +186,34 @@ let view (model:Model) dispatch =
         event.preventDefault()
         dispatch Submit    
 
+    let onBlur fieldId _ =
+        Touch fieldId |> dispatch 
+
+
     let validationLabelFor (fieldId: FieldId) (model: Model) =    
-        if Form.hasValidationError fieldId model then
+        if Form.hasValidationError fieldId model && Form.isTouched fieldId model then
             let message = 
                 Form.getValidationErrors fieldId model
                 |> List.reduce (fun acc v -> acc + " " + v)
             label [] [ unbox message ]
         else 
             fragment [] []
+
+    let formInput (labelText: string) fieldId =     
+        div [] [
+            label [] [ unbox labelText ]
+            input [ Form.getField fieldId model |> Value; onChange fieldId |> OnChange; onBlur fieldId |> OnBlur ]
+            validationLabelFor fieldId model
+        ]
     
     div []
         [
             form [ OnSubmit onSubmit ] [
-                div [] [
-                    label [] [ unbox "First name" ]
-                    input [ Form.getField firstNameId model |> Value; onChange firstNameId |> OnChange ]
-                    validationLabelFor firstNameId model
-                ]
-                div [] [
-                    label [] [ unbox "Last name" ]
-                    input [ Form.getField lastNameId model |> Value; onChange lastNameId |> OnChange ]
-                    validationLabelFor lastNameId model 
-                ]
-                div [] [
-                    label [] [ unbox "Age" ]
-                    input [ Form.getField ageId model |> Value; onChange ageId |> OnChange ]
-                    validationLabelFor ageId model 
-                ]
-                div [] [
-                    label [] [ unbox "Address 1" ]
-                    input [ Form.getField address1Id model |> Value; onChange address1Id |> OnChange ]
-                    validationLabelFor address1Id model 
-                ]
-                div [] [
-                    label [] [ unbox "Address 2" ]
-                    input [ Form.getField address2Id model |> Value; onChange address2Id |> OnChange ]
-                    validationLabelFor address2Id model 
-                ]
+                formInput "First name" firstNameId
+                formInput "Last name" lastNameId
+                formInput "Age" ageId
+                formInput "Address 1" address1Id
+                formInput "Address 2" address2Id
                 button [ Type "submit" ] [ unbox "Submit" ]
             ]
 
