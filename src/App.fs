@@ -30,7 +30,7 @@ type Model =
         ValidationErrors: Map<FieldId, ValidationError list>
         Touched: Set<FieldId>
         Result: Person option
-        Submitted: bool
+        IsSubmitted: bool
     }
 
 type Validator<'a> = (Model -> ValidationResult<'a>)
@@ -45,7 +45,7 @@ let init() : Model = {
     ValidationErrors = Map.empty
     Result = None    
     Touched = Set.empty
-    Submitted = false
+    IsSubmitted = false
 }
 
 module FieldId =
@@ -176,7 +176,7 @@ let update (msg:Msg) (model:Model) =
         let model = { model with Touched = touched }
         validateModel validate model
     | Submit -> 
-        let model = { model with Submitted = true }
+        let model = { model with IsSubmitted = true }
         let validationResult = validate model
         let model = 
             match validationResult with
@@ -197,7 +197,7 @@ let view (model:Model) dispatch =
         Touch fieldId |> dispatch 
 
     let validationLabelFor (fieldId: FieldId) (model: Model) =    
-        let showValidationMessageIfPresent = Form.isTouched fieldId model || model.Submitted
+        let showValidationMessageIfPresent = Form.isTouched fieldId model || IsSubmitted
         if Form.hasValidationError fieldId model && showValidationMessageIfPresent then
             let message = 
                 Form.getValidationErrors fieldId model
