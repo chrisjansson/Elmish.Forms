@@ -8,7 +8,9 @@ open Fable.Helpers.React.Props
 open Fable.Core.JsInterop
 
 type Field = string
+type FieldName = string
 type FieldId = string
+
 type ValidationError = string
 type KeyedValidationError = FieldId * ValidationError
 type ValidationResult<'a> = Result<'a, KeyedValidationError list>
@@ -35,6 +37,13 @@ type Model =
 
 type Validator<'a> = (Model -> ValidationResult<'a>)
 
+type FieldDefinition<'a> = 
+    { 
+        Id: FieldId
+        Name: string
+        Validate: Validator<'a>
+    }
+
 type Msg =
     | InputChanged of FieldId * string
     | Touch of FieldId
@@ -54,7 +63,12 @@ module FieldId =
 module Field =
     let defaultValue: Field = ""
 
+
+
+
 module Form =
+
+
     let getField (id: FieldId) (model: Model): Field = 
         Map.tryFind id model.Fields 
         |> Option.defaultValue Field.defaultValue
@@ -89,6 +103,40 @@ module Form =
         let c' = c model
         let d' = d model
         fa a' b' c' d'
+
+module FieldDefinition =
+    let private createDefaultOptionalFieldValidator (id: FieldId) =
+        fun model -> 
+            let field = Form.getField id model
+            if field.Length = 0 then
+                None |> Ok
+            else    
+                Some field |> Ok
+
+    let define (id: string): FieldDefinition<string option> =
+        let fieldId: FieldId = FieldId.create id
+        {
+            Id = fieldId
+            Name = id
+            Validate = createDefaultOptionalFieldValidator fieldId
+        }
+
+    let withName (field: FieldDefinition<_>) (name: FieldName) =
+        { field with Name = name }
+
+    let isRequired (field: FieldDefinition<_>) =
+        let requiredValidation model =
+            match field.Validate model with
+            | Ok (Some v) -> Ok v
+            | Ok None -> 
+                let requiredErrorMessage = sprintf "%s is required" field.Name
+                Error [ (field.Id, requiredErrorMessage) ]
+            | Error e -> Error e
+        { 
+            Id = field.Id
+            Name = field.Name
+            Validate = requiredValidation 
+        }        
 
 let firstNameId = FieldId.create "firstName"
 let lastNameId = FieldId.create "lastName"
