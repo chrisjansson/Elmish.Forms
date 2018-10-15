@@ -121,7 +121,7 @@ module FieldDefinition =
             Validate = createDefaultOptionalFieldValidator fieldId
         }
 
-    let withName (field: FieldDefinition<_>) (name: FieldName) =
+    let withName (name: FieldName) (field: FieldDefinition<_>)  =
         { field with Name = name }
 
     let isRequired (field: FieldDefinition<_>) =
@@ -201,39 +201,35 @@ let tryParseInt (s: string) =
     | _ -> None
 
 let validate (model: Model): ValidationResult<Person> = 
-    let validateFirstName (model: Model): ValidationResult<string> =
-        let value = Form.getField firstNameId model
-        if value.Length < 3 then 
-            Error [ (firstNameId, "First name must be at least 3 characters") ]
-        else 
-            Ok value
+    let validateFirstName =
+        FieldDefinition.define firstNameId
+        |> FieldDefinition.withName "First name"
+        |> FieldDefinition.minimumLength 3
+        |> FieldDefinition.isRequired
+
     let validateLastName (model: Model): ValidationResult<string> =
         let value = Form.getField lastNameId model
         if value.Length < 1 || value.[0] <> 'a' then 
             Error [ (lastNameId, "Last name must begin with 'a'") ]
         else         
             Ok value
-    let validateAge (model: Model): ValidationResult<int> =
-        let value = Form.getField ageId model
-        match tryParseInt value with 
-        | Some age -> 
-            if age <= 50 then
-                Error [ (ageId, "Age must be above 50") ]
-            else 
-                Ok age            
-        | None -> Error [ (ageId, "Age must be a number") ]
-    let validateAddress1 (model: Model): ValidationResult<string> =
-        let value = Form.getField address1Id model
-        if value.Length > 0 then 
-            Ok value
-        else 
-            Error [ (address1Id, "Address 1 is required")]        
-    let validateAddress2 (model: Model): ValidationResult<string> =
-        let value = Form.getField address2Id model
-        if value.Length > 0 then 
-            Ok value
-        else 
-            Error [ (address2Id, "Address 2 is required")]        
+
+    let validateAge =
+        FieldDefinition.define ageId        
+        |> FieldDefinition.withName "Age"
+        |> FieldDefinition.int
+        |> FieldDefinition.greaterThan 50
+        |> FieldDefinition.isRequired
+
+    let validateAddress1 =
+        FieldDefinition.define address1Id
+        |> FieldDefinition.withName "Address 1"
+        |> FieldDefinition.isRequired
+
+    let validateAddress2 =
+        FieldDefinition.define address2Id
+        |> FieldDefinition.withName "Address 2"
+        |> FieldDefinition.isRequired
 
     let createAddress address1 address2 = 
         { Address1 = address1; Address2 = address2 }        
@@ -244,7 +240,12 @@ let validate (model: Model): ValidationResult<Person> =
     let validateAddress = Form.map2 createAddress
 
     let validatePerson = 
-        Form.map4 createPerson validateFirstName validateLastName validateAge (validateAddress validateAddress1 validateAddress2)
+        Form.map4 
+            createPerson 
+            validateFirstName.Validate 
+            validateLastName 
+            validateAge.Validate 
+            (validateAddress validateAddress1.Validate validateAddress2.Validate)
 
     validatePerson model
 
@@ -296,7 +297,7 @@ let view (model:Model) dispatch =
         Touch fieldId |> dispatch 
 
     let validationLabelFor (fieldId: FieldId) (model: Model) =    
-        let showValidationMessageIfPresent = Form.isTouched fieldId model || IsSubmitted
+        let showValidationMessageIfPresent = Form.isTouched fieldId model || model.IsSubmitted
         if Form.hasValidationError fieldId model && showValidationMessageIfPresent then
             let message = 
                 Form.getValidationErrors fieldId model
