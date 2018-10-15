@@ -189,6 +189,25 @@ module FieldDefinition =
             Validate = limitValidation
         }        
 
+    let predicate (pred: 'a -> bool) (buildMessage: string -> string) (field: FieldDefinition<'a option>) =
+        let validate model =
+            match field.Validate model with
+            | Ok (Some v) ->
+                if pred v then
+                    v |> Some |> Ok
+                else
+                    let errorMessage = buildMessage field.Name
+                    Error [ (field.Id, errorMessage) ]                
+            | Ok None -> Ok None                
+            | Error e -> Error e                
+        {
+            Id = field.Id
+            Name = field.Name
+            Validate = validate
+        }        
+
+
+
 let firstNameId = FieldId.create "firstName"
 let lastNameId = FieldId.create "lastName"
 let ageId = FieldId.create "age"
