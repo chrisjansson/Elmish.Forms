@@ -7,13 +7,18 @@ open Fable.Helpers.React
 open Fable.Helpers.React.Props
 open Fable.Core.JsInterop
 
-type Field = string
+type FieldState = string
 type FieldName = string
 type FieldId = string
 
 type ValidationError = string
 type KeyedValidationError = FieldId * ValidationError
 type ValidationResult<'a> = Result<'a, KeyedValidationError list>
+
+type Field =
+    | Group of Map<FieldId, Field>
+    //| List of FieldS list
+    | Leaf of FieldState
 
 type Person = {
     FirstName: string
@@ -28,7 +33,7 @@ and Address = {
 
 type Model =
     {
-        Fields: Map<FieldId, Field>
+        Fields: Map<FieldId, FieldState>
         ValidationErrors: Map<FieldId, ValidationError list>
         Touched: Set<FieldId>
         Result: Person option
@@ -61,7 +66,7 @@ module FieldId =
     let create (id: string): FieldId = id
 
 module Field =
-    let defaultValue: Field = ""
+    let defaultValue: FieldState = ""
 
 
 
@@ -69,7 +74,7 @@ module Field =
 module Form =
 
 
-    let getField (id: FieldId) (model: Model): Field = 
+    let getField (id: FieldId) (model: Model): FieldState = 
         Map.tryFind id model.Fields 
         |> Option.defaultValue Field.defaultValue
 
