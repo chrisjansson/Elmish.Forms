@@ -226,12 +226,13 @@ let validate (model: Model): ValidationResult<Person> =
         |> FieldDefinition.minimumLength 3
         |> FieldDefinition.isRequired
 
-    let validateLastName (model: Model): ValidationResult<string> =
-        let value = Form.getField lastNameId model
-        if value.Length < 1 || value.[0] <> 'a' then 
-            Error [ (lastNameId, "Last name must begin with 'a'") ]
-        else         
-            Ok value
+    let validateLastName =
+        let startsWithA (s: string) =  s.Length < 1 || s.[0] <> 'a'
+
+        FieldDefinition.define lastNameId        
+        |> FieldDefinition.withName "Last name"
+        |> FieldDefinition.predicate startsWithA (fun fieldName -> sprintf "%s must begin with 'a'" fieldName) 
+        |> FieldDefinition.isRequired
 
     let validateAge =
         FieldDefinition.define ageId        
@@ -262,7 +263,7 @@ let validate (model: Model): ValidationResult<Person> =
         Form.map4 
             createPerson 
             validateFirstName.Validate 
-            validateLastName 
+            validateLastName.Validate 
             validateAge.Validate 
             (validateAddress validateAddress1.Validate validateAddress2.Validate)
 
