@@ -68,9 +68,6 @@ module FieldId =
 module Field =
     let defaultValue: FieldState = ""
 
-
-
-
 module Form =
 
 
@@ -356,7 +353,9 @@ let view (model:Model) dispatch =
             ]
         ]
 
-Program.mkSimple init update view
-    |> Program.withReact "elmish-app"
-    |> Program.withConsoleTrace
-    |> Program.run
+// Program.mkSimple init update view
+//     |> Program.withReact "elmish-app"
+//     |> Program.withConsoleTrace
+//     |> Program.run
+
+Path.Tests.runTests ()
