@@ -4,15 +4,30 @@ module Path
 
 type PathSegment =
     | Node of string
+    | List of int
 
 let parse (path: string) =
     let rec inner (path: string) acc = 
         let segments = path.Split([| "." |], 2, System.StringSplitOptions.None)
         match segments with
         | [| |] -> acc
-        | [| node |] -> Node node :: acc
+        | [| node |] -> 
+            if node.StartsWith("[") then
+                let indexStr = node.Substring(1, node.Length - 2)
+                let index = System.Int32.Parse(indexStr)                
+                List index :: acc
+            else            
+                Node node :: acc
         | _ ->
-            let acc = Node segments.[0] :: acc
+            let result = 
+                let node = segments.[0]
+                if node.StartsWith("[") then
+                    let indexStr = node.Substring(1, node.Length - 2)
+                    let index = System.Int32.Parse(indexStr)                
+                    List index
+                else            
+                    Node node
+            let acc = result :: acc
             inner segments.[1] acc
     inner path [] |> List.rev    
 
@@ -29,3 +44,6 @@ module Tests =
         test "node2" [ Node "node2" ]
         test "node0.node1" [ Node "node0"; Node "node1" ]
         test "node0.node1.node2" [ Node "node0"; Node "node1"; Node "node2" ]
+        test "node.[0]" [ Node "node"; List 0 ]
+        test "node.[0].[2]" [ Node "node"; List 0; List 2 ]
+        test "node.[0].node.[2]" [ Node "node"; List 0; Node "node"; List 2 ]
