@@ -7,26 +7,21 @@ type PathSegment =
     | List of int
 
 let parse (path: string) =
+    let parseNode (node: string ) =
+        if node.StartsWith("[") then
+            let indexStr = node.Substring(1, node.Length - 2)
+            let index = System.Int32.Parse(indexStr)                
+            List index
+        else            
+            Node node
     let rec inner (path: string) acc = 
         let segments = path.Split([| "." |], 2, System.StringSplitOptions.None)
         match segments with
         | [| |] -> acc
         | [| node |] -> 
-            if node.StartsWith("[") then
-                let indexStr = node.Substring(1, node.Length - 2)
-                let index = System.Int32.Parse(indexStr)                
-                List index :: acc
-            else            
-                Node node :: acc
+            parseNode node :: acc                
         | _ ->
-            let result = 
-                let node = segments.[0]
-                if node.StartsWith("[") then
-                    let indexStr = node.Substring(1, node.Length - 2)
-                    let index = System.Int32.Parse(indexStr)                
-                    List index
-                else            
-                    Node node
+            let result = parseNode segments.[0]
             let acc = result :: acc
             inner segments.[1] acc
     inner path [] |> List.rev    
