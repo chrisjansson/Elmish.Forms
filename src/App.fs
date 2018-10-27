@@ -100,8 +100,9 @@ let update (msg:Msg) (model:Model) =
 
     match msg with
     | InputChanged (id, value) -> 
-        let model = { model with Fields = Map.add id value model.Fields }
-        validateModel validate model
+        // let model = { model with Fields = Map.add id value model.Fields }
+        // validateModel validate model
+        failwith "todo"
     | Touch id -> 
         let touched = Set.add id model.Touched
         let model = { model with Touched = touched }

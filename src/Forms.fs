@@ -63,10 +63,12 @@ module Forms
 
         let getField (id: FieldId) (model: Model<_>): FieldState = 
             Map.tryFind id model.Fields 
+            |> Option.map (fun (Leaf l) -> l)
             |> Option.defaultValue Field.defaultValue
 
         let getField2 (id: FieldId) (model: Model<_>): FieldState = 
             Map.tryFind id model.Fields 
+            |> Option.map (fun (Leaf l) -> l)
             |> Option.defaultValue Field.defaultValue
 
         let getValidationErrors (id: FieldId) (model: Model<_>): ValidationError list =
