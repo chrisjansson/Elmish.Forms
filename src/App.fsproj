@@ -5,6 +5,7 @@
   <ItemGroup>
     <Compile Include="Extensions.fs" />
     <Compile Include="Path.fs" />
+    <Compile Include="Forms.fs" />
     <Compile Include="App.fs" />
   </ItemGroup>
   <ItemGroup>
