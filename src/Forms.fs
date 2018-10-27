@@ -11,13 +11,14 @@ module Forms
         type ValidationResult<'a> = Result<'a, KeyedValidationError list>
 
         type Field =
-            | Group of Map<FieldId, Field>
+            | Group of Group
             //| List of FieldS list
             | Leaf of FieldState
+        and Group = Map<FieldId, Field>        
 
         type Model<'T> =
             {
-                Fields: Map<FieldId, FieldState>
+                Fields: Group
                 ValidationErrors: Map<FieldId, ValidationError list>
                 Touched: Set<FieldId>
                 Result: 'T option
