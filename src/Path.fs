@@ -1,5 +1,3 @@
-
-
 module Path
 
 type PathSegment =
