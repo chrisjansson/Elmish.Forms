@@ -64,6 +64,10 @@ module Forms
             Map.tryFind id model.Fields 
             |> Option.defaultValue Field.defaultValue
 
+        let getField2 (id: FieldId) (model: Model<_>): FieldState = 
+            Map.tryFind id model.Fields 
+            |> Option.defaultValue Field.defaultValue
+
         let getValidationErrors (id: FieldId) (model: Model<_>): ValidationError list =
             Map.tryFind id model.ValidationErrors
             |> Option.defaultValue []

@@ -168,3 +168,4 @@ let view (model:Model) dispatch =
 //     |> Program.run
 
 Path.Tests.runTests ()
+FormTests.run ()
