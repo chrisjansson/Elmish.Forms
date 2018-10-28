@@ -67,9 +67,24 @@ module Forms
             |> Option.defaultValue Field.defaultValue
 
         let getField2 (id: FieldId) (model: Model<_>): FieldState = 
-            Map.tryFind id model.Fields 
-            |> Option.map (fun (Leaf l) -> l)
-            |> Option.defaultValue Field.defaultValue
+            let rec find (path: Path.PathSegment list) (field: Model.Field) =
+                match (path, field) with
+                | ([], field) -> Some field
+                | (head::tail, field) ->
+                    match (head, field) with
+                    | (Path.Node n, Model.Group g) ->
+                        match Map.tryFind n g with
+                        | Some field -> find tail field
+                        | None -> None
+                    | (Path.List index, _) -> None
+                    | _ -> None
+
+            let path = Path.parse id
+            let field = model.Fields |> Model.Group
+
+            match find path field with
+            | Some (Leaf l) -> l
+            | _ -> Field.defaultValue
 
         let getValidationErrors (id: FieldId) (model: Model<_>): ValidationError list =
             Map.tryFind id model.ValidationErrors
