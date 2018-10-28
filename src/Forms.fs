@@ -12,7 +12,7 @@ module Forms
 
         type Field =
             | Group of Group
-            //| List of FieldS list
+            | List of Field list
             | Leaf of FieldState
         and Group = Map<FieldId, Field>        
 
@@ -76,7 +76,10 @@ module Forms
                         match Map.tryFind n g with
                         | Some field -> find tail field
                         | None -> None
-                    | (Path.List index, _) -> None
+                    | (Path.List index, Model.List l) -> 
+                        match List.tryItem index l with
+                        | Some field -> find tail field
+                        | None -> None
                     | _ -> None
 
             let path = Path.parse id
