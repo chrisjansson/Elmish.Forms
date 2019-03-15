@@ -89,6 +89,36 @@ module Forms
             | Some (Leaf l) -> l
             | _ -> Field.defaultValue
 
+        let setField (id: FieldId) (model: Model<_>) (fieldState: FieldState): Model<_> =
+            let path = Path.parse id
+            let rec set (path: Path.PathSegment list) (fields: Model.Field option) (field: FieldState) =
+                match (path, fields) with
+                | ([], Some (Leaf fs)) -> Leaf fieldState
+                //Insert when leaf node does not exist
+                | ([], None) -> Leaf fieldState
+                | ( Path.Node n :: rest, Some (Group g)) ->
+                    let node = Map.tryFind n g
+                    let fs = set rest node field
+                    let g = Map.add n fs g
+                    Field.Group g
+                //Insert when group node does not exist
+                | ( Path.Node n :: rest, None) ->
+                    let fs = set rest None field
+                    let g = Map.add n fs Map.empty
+                    Field.Group g
+                | (Path.List i ::rest, Some (List l)) ->
+                    let newList = List.mapi (fun index node ->
+                            if index = i then
+                                set rest (Some node) field
+                            else
+                                node) l
+                    List newList
+//                | (x, _) -> failwith (sprintf "uncaught path %A" x)
+            
+            let (Field.Group fields) = set path (Some (Field.Group model.Fields)) fieldState
+                
+            { model with Fields = fields }
+
         let getValidationErrors (id: FieldId) (model: Model<_>): ValidationError list =
             Map.tryFind id model.ValidationErrors
             |> Option.defaultValue []
