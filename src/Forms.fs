@@ -6,9 +6,10 @@ module Forms
         type FieldName = string
         type FieldId = string
 
-        type ValidationError = string
+        type ValidationError = string -> string
         type KeyedValidationError = FieldId * ValidationError
         type ValidationResult<'a> = Result<'a, KeyedValidationError list>
+        
 
         type Field =
             | Group of Group
@@ -169,119 +170,133 @@ module Forms
                 | Error l, Error r -> Error <| l@r
             Validator inner
 
+        //TODO: should be string option
         let text id =
             let inner (f: Model.Group) =
                 match Map.tryFind id f with
                 | Some (Model.Leaf v) -> Ok v
                 | None -> Ok ""
-                | _ -> Error [ (id, "Invalid group type")  ]
+                | _ -> Error [ (id, (fun _ -> "Invalid group type"))  ]
             Validator inner
+            
+        let required id (f: Validator<string>) =
+            let inner (g: Model.Group) =
+                let (Validator v) = f
+                match (v g) with
+                | Ok s ->
+                    if System.String.IsNullOrWhiteSpace(s) then
+                        Error [ (id, (fun label -> (sprintf "%s is required" label))) ]
+                    else
+                        Ok s
+                | e -> e
+            Validator inner
+            
            
         let run (validator: Validator<'T>) (form: Model.Model<'T>) =
             let (Validator v) = validator
             v form.Fields
                        
     let (<*>) = Validator.apply
-                       
-    module FieldDefinition =
-        open Model
-        let private createDefaultOptionalFieldValidator (id: FieldId) =
-            fun model -> 
-                let field = Form.getField id model
-                if field.Length = 0 then
-                    None |> Ok
-                else    
-                    Some field |> Ok
-
-        let define (id: string): FieldDefinition<string option, _> =
-            let fieldId: FieldId = FieldId.create id
-            {
-                Id = fieldId
-                Name = id
-                Validate = createDefaultOptionalFieldValidator fieldId
-            }
-
-        let withName (name: FieldName) (field: FieldDefinition<_, _>)  =
-            { field with Name = name }
-
-        let isRequired (field: FieldDefinition<'a option, _>) =
-            let requiredValidation model =
-                match field.Validate model with
-                | Ok (Some v) -> Ok v
-                | Ok None -> 
-                    let requiredErrorMessage = sprintf "%s is required" field.Name
-                    Error [ (field.Id, requiredErrorMessage) ]
-                | Error e -> Error e
-            { 
-                Id = field.Id
-                Name = field.Name
-                Validate = requiredValidation 
-            }        
-
-        let minimumLength (length: int) (field: FieldDefinition<string option, _>) =
-            let lengthValidation model =
-                match field.Validate model with
-                | Ok (Some v) -> 
-                    if v.Length >= length then
-                        v |> Some |> Ok
-                    else                 
-                        let errorMessage = sprintf "%s must be at least %i characters" field.Name length
-                        Error [ (field.Id, errorMessage) ]
-                | Ok None -> Ok None                
-                | Error e -> Error e            
-            {
-                Id = field.Id
-                Name = field.Name
-                Validate = lengthValidation
-            }        
-
-        let int (field: FieldDefinition<string option, _>) =
-            let intValidation model =
-                match field.Validate model with
-                | Ok (Some v) -> 
-                    match System.Int32.TryParse(v) with
-                    | (true, i) -> i |> Some |> Ok
-                    | _ -> 
-                        let errorMessage = sprintf "%s must be an integer" field.Name
-                        Error [ (field.Id, errorMessage) ]
-                | Ok None -> Ok None                
-                | Error e -> Error e            
-            {
-                Id = field.Id
-                Name = field.Name
-                Validate = intValidation
-            }        
-
-        let greaterThan (limit: int) (field: FieldDefinition<int option, _>) =
-            let limitValidation model =
-                match field.Validate model with
-                | Ok (Some v) -> 
-                    if v >= limit then
-                        v |> Some |> Ok
-                    else                 
-                        let errorMessage = sprintf "%s must be at greater than %i" field.Name limit
-                        Error [ (field.Id, errorMessage) ]
-                | Ok None -> Ok None                
-                | Error e -> Error e            
-            {
-                Id = field.Id
-                Name = field.Name
-                Validate = limitValidation
-            }        
-
-        let predicate (pred: 'a -> bool) (buildMessage: string -> string) (field: FieldDefinition<'a option, _>) =
-            let validate model =
-                match field.Validate model with
-                | Ok (Some v) ->
-                    if pred v then
-                        v |> Some |> Ok
-                    else
-                        let errorMessage = buildMessage field.Name
-                        Error [ (field.Id, errorMessage) ]                
-                | Ok None -> Ok None                
-                | Error e -> Error e                
-            {
-                Id = field.Id
-                Name = field.Name
-                Validate = validate
-            }        
+//                       
+//    module FieldDefinition =
+//        open Model
+//        let private createDefaultOptionalFieldValidator (id: FieldId) =
+//            fun model -> 
+//                let field = Form.getField id model
+//                if field.Length = 0 then
+//                    None |> Ok
+//                else    
+//                    Some field |> Ok
+//
+//        let define (id: string): FieldDefinition<string option, _> =
+//            let fieldId: FieldId = FieldId.create id
+//            {
+//                Id = fieldId
+//                Name = id
+//                Validate = createDefaultOptionalFieldValidator fieldId
+//            }
+//
+//        let withName (name: FieldName) (field: FieldDefinition<_, _>)  =
+//            { field with Name = name }
+//
+//        let isRequired (field: FieldDefinition<'a option, _>) =
+//            let requiredValidation model =
+//                match field.Validate model with
+//                | Ok (Some v) -> Ok v
+//                | Ok None -> 
+//                    let requiredErrorMessage = sprintf "%s is required" field.Name
+//                    Error [ (field.Id, requiredErrorMessage) ]
+//                | Error e -> Error e
+//            { 
+//                Id = field.Id
+//                Name = field.Name
+//                Validate = requiredValidation 
+//            }        
+//
+//        let minimumLength (length: int) (field: FieldDefinition<string option, _>) =
+//            let lengthValidation model =
+//                match field.Validate model with
+//                | Ok (Some v) -> 
+//                    if v.Length >= length then
+//                        v |> Some |> Ok
+//                    else                 
+//                        let errorMessage = sprintf "%s must be at least %i characters" field.Name length
+//                        Error [ (field.Id, errorMessage) ]
+//                | Ok None -> Ok None                
+//                | Error e -> Error e            
+//            {
+//                Id = field.Id
+//                Name = field.Name
+//                Validate = lengthValidation
+//            }        
+//
+//        let int (field: FieldDefinition<string option, _>) =
+//            let intValidation model =
+//                match field.Validate model with
+//                | Ok (Some v) -> 
+//                    match System.Int32.TryParse(v) with
+//                    | (true, i) -> i |> Some |> Ok
+//                    | _ -> 
+//                        let errorMessage = sprintf "%s must be an integer" field.Name
+//                        Error [ (field.Id, errorMessage) ]
+//                | Ok None -> Ok None                
+//                | Error e -> Error e            
+//            {
+//                Id = field.Id
+//                Name = field.Name
+//                Validate = intValidation
+//            }        
+//
+//        let greaterThan (limit: int) (field: FieldDefinition<int option, _>) =
+//            let limitValidation model =
+//                match field.Validate model with
+//                | Ok (Some v) -> 
+//                    if v >= limit then
+//                        v |> Some |> Ok
+//                    else                 
+//                        let errorMessage = sprintf "%s must be at greater than %i" field.Name limit
+//                        Error [ (field.Id, errorMessage) ]
+//                | Ok None -> Ok None                
+//                | Error e -> Error e            
+//            {
+//                Id = field.Id
+//                Name = field.Name
+//                Validate = limitValidation
+//            }        
+//
+//        let predicate (pred: 'a -> bool) (buildMessage: string -> string) (field: FieldDefinition<'a option, _>) =
+//            let validate model =
+//                match field.Validate model with
+//                | Ok (Some v) ->
+//                    if pred v then
+//                        v |> Some |> Ok
+//                    else
+//                        let errorMessage = buildMessage field.Name
+//                        Error [ (field.Id, errorMessage) ]                
+//                | Ok None -> Ok None                
+//                | Error e -> Error e                
+//            {
+//                Id = field.Id
+//                Name = field.Name
+//                Validate = validate
+//            }        

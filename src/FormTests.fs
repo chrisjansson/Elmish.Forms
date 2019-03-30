@@ -67,14 +67,14 @@ module SimpleFormTest =
         runTest "validator for existing scalar string" <| fun _ ->
             let v = Validator.text "field"
             let model = { Forms.Model.init() with Fields = state.Fields }
-            let result = Validator.run v model
-            expect (Ok "value") result "field"
+            let (Ok result) = Validator.run v model
+            expect "value" result "field"
             
         runTest "validator for nonexisting scalar string" <| fun _ ->
             let v = Validator.text "non_existing"
             let model = { Forms.Model.init() with Fields = state.Fields }
-            let result = Validator.run v model
-            expect (Ok "") result "field"
+            let (Ok result) = Validator.run v model
+            expect "" result "field"
             
         runTest "validator for two scalar fields" <| fun _ ->
             let v = Validator.from (fun l r -> l,r)
@@ -82,8 +82,24 @@ module SimpleFormTest =
                 <*> Validator.text "field3"
             
             let model = { Forms.Model.init() with Fields = state.Fields }
-            let result = Validator.run v model
-            expect (Ok ("value", "")) result "field"
+            let (Ok result) = Validator.run v model
+            expect ("value", "") result "field"
+
+        runTest "Error messages are formatted by error templates" <| fun _ ->
+            let v = Validator.from (fun l r -> l,r)
+                <*> (Validator.text "field" |> Validator.required "field")
+                <*> (Validator.text "field3" |> Validator.required "field3")
+            
+            let model = { Forms.Model.init() with Fields = state.Fields }
+            let (Error result) = Validator.run v model
+            
+            let formattedErrors =
+                List.map (fun (id,template) -> id, (template id)) result
+            
+            expect [ "field3", "field3 is required"  ] formattedErrors "field"
+
+
+        
 
 //TODO: Add/remove to lists via commands
 //TODO: Fail when state differs from provided path
