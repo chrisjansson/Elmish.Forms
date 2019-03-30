@@ -31,7 +31,7 @@ let expect expected actual message =
 let runTest (name: string) f =
     try
         f()
-        Fable.Import.Browser.console.log((sprintf "Test passed: %s" name))
+        Fable.Import.Browser.console.log((sprintf "%%cTest passed: %s" name), "background-color: lightgreen")
     with
     | e ->
         Fable.Import.Browser.console.error((sprintf "Test failed: %s\n%s" name e.Message))
