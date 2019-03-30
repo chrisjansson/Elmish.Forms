@@ -46,7 +46,7 @@ module Forms
             Touched = Set.empty
             IsSubmitted = false
         }
-
+        
     module FieldId =
         open Model
 
@@ -59,8 +59,8 @@ module Forms
 
     module Form =
         open Model
-        open Extensions
-
+        open Extensions          
+        
         let getField (id: FieldId) (model: Model<_>): FieldState = 
             Map.tryFind id model.Fields 
             |> Option.map (fun (Leaf l) -> l)
@@ -149,7 +149,40 @@ module Forms
             let c' = c model
             let d' = d model
             fa a' b' c' d'
+            
+    
+    module Validator =
+        type Validator<'T> = Validator of (Model.Group -> Model.ValidationResult<'T>)
+        
+        let from (f: 'T): Validator<'T> =
+            Validator (fun _ -> Ok f)
+            
+        let apply (vf: Validator<_>) (va: Validator<_>): Validator<_> =
+            let inner g =
+                let (Validator f) = vf
+                let (Validator a) = va
+                
+                match (f g, a g) with
+                | Ok rf, Ok ra -> Ok (rf ra)
+                | Ok _, Error e -> Error e
+                | Error e, Ok _ -> Error e
+                | Error l, Error r -> Error <| l@r
+            Validator inner
 
+        let text id =
+            let inner (f: Model.Group) =
+                match Map.tryFind id f with
+                | Some (Model.Leaf v) -> Ok v
+                | None -> Ok ""
+                | _ -> Error [ (id, "Invalid group type")  ]
+            Validator inner
+           
+        let run (validator: Validator<'T>) (form: Model.Model<'T>) =
+            let (Validator v) = validator
+            v form.Fields
+                       
+    let (<*>) = Validator.apply
+                       
     module FieldDefinition =
         open Model
         let private createDefaultOptionalFieldValidator (id: FieldId) =

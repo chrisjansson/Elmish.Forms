@@ -24,7 +24,19 @@ let state: Model.Model<unit> =
         initial with Fields = fields
     }
 
+let expect expected actual message =
+    if expected <> actual then
+        failwithf "Expected %A to be %A\n%s" actual expected message
+        
+let runTest (name: string) f =
+    try
+        f()
+        Fable.Import.Browser.console.log((sprintf "Test passed: %s" name))
+    with
+    | e ->
+        Fable.Import.Browser.console.error((sprintf "Test failed: %s\n%s" name e.Message))
 
+    
 let test (fieldId: FieldId) expected =
     let actual = Form.getField2 fieldId state
     if actual = expected then 
@@ -48,12 +60,33 @@ let testSet (fieldId: FieldId) expected =
     | e ->
         printfn "failed: %A %A" fieldId e
     
-        
+
+module SimpleFormTest =
+    let run _ =
+
+        runTest "validator for existing scalar string" <| fun _ ->
+            let v = Validator.text "field"
+            let model = { Forms.Model.init() with Fields = state.Fields }
+            let result = Validator.run v model
+            expect (Ok "value") result "field"
+            
+        runTest "validator for nonexisting scalar string" <| fun _ ->
+            let v = Validator.text "non_existing"
+            let model = { Forms.Model.init() with Fields = state.Fields }
+            let result = Validator.run v model
+            expect (Ok "") result "field"
+            
+        runTest "validator for two scalar fields" <| fun _ ->
+            let v = Validator.from (fun l r -> l,r)
+                <*> Validator.text "field"
+                <*> Validator.text "field3"
+            
+            let model = { Forms.Model.init() with Fields = state.Fields }
+            let result = Validator.run v model
+            expect (Ok ("value", "")) result "field"
+
 //TODO: Add/remove to lists via commands
-//TODO: Add to lists implicitly?
-//TODO: Insert new nodes when necessary
 //TODO: Fail when state differs from provided path
-        
 let run _ =
     test "field" "value"
     test "field2.nested" "nested_value"
@@ -63,7 +96,6 @@ let run _ =
     test "leafs.[2]" ""
     test "field2.nested_list.[0]" "nested_list_value"
     
-    
     testSet "field" "value2"
     testSet "field2.nested" "nested_value2"
     testSet "nonextantfield" "new"
@@ -72,7 +104,7 @@ let run _ =
     testSet "field2.nested_list.[0]" "nested_list_value_new"
     testSet "nonextantfield.nested" "new"
     
-    
+    SimpleFormTest.run ()
     
     
     //testSet "leafs.[2]" "" //Modify non existing list item, I think a pre-condition is adding the item to the list
