@@ -170,25 +170,28 @@ module Forms
                 | Error l, Error r -> Error <| l@r
             Validator inner
 
-        //TODO: should be string option
         let text id =
             let inner (f: Model.Group) =
                 match Map.tryFind id f with
-                | Some (Model.Leaf v) -> Ok v
-                | None -> Ok ""
+                | Some (Model.Leaf v) ->
+                    Ok <|
+                        if System.String.IsNullOrWhiteSpace(v) then
+                            None
+                        else
+                            Some v
+                | None -> Ok None
                 | _ -> Error [ (id, (fun _ -> "Invalid group type"))  ]
             Validator inner
             
-        let required id (f: Validator<string>) =
+        let required id (f: Validator<'a option>) =
             let inner (g: Model.Group) =
                 let (Validator v) = f
                 match (v g) with
-                | Ok s ->
-                    if System.String.IsNullOrWhiteSpace(s) then
-                        Error [ (id, (fun label -> (sprintf "%s is required" label))) ]
-                    else
-                        Ok s
-                | e -> e
+                | Ok (Some v) ->
+                    Ok v
+                | Ok None ->
+                    Error [ (id, (fun label -> (sprintf "%s is required" label))) ]
+                | Error e-> Error e
             Validator inner
             
            
