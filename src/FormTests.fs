@@ -14,12 +14,22 @@ let state: Model.Model<unit> =
         [
             Leaf "leaf0"
             Leaf "leaf1"
-        ]    
+        ]
+    let listOfGroups =
+        [
+            Model.Group <| Map.ofList [
+                ("inlistf0", Leaf "0_0")
+            ]
+            Model.Group <| Map.ofList [
+                ("inlistf0", Leaf "0_1")
+            ]
+        ]
     let fields = 
         Map.empty 
         |> Map.add "field" (Leaf "value")
         |> Map.add "field2" (Model.Group nestedFields)
         |> Map.add "leafs" (Model.List listOfLeafs)
+        |> Map.add "groupedlist" (Model.List listOfGroups)
     { 
         initial with Fields = fields
     }
@@ -85,7 +95,7 @@ module SimpleFormTest =
             let (Ok result) = Validator.run v model
             expect (Some "value", None) result "field"
 
-        runTest "Error messages are formatted by error templates" <| fun _ ->
+        runTest "error messages are formatted by error templates" <| fun _ ->
             let v = Validator.from (fun l r -> l,r)
                 <*> (Validator.text "field" |> Validator.required "field")
                 <*> (Validator.text "field3" |> Validator.required "field3")
@@ -98,8 +108,24 @@ module SimpleFormTest =
             
             expect [ "field3", "field3 is required"  ] formattedErrors "field"
 
+        runTest "validators can be nested as subvalidators" <| fun _ ->
+            let v = Validator.from (fun v nv -> (v, nv))
+                <*> Validator.text "field"
+                <*> (Validator.withSub "field2" (Validator.text "nested"))
+            
+            let model = { Forms.Model.init() with Fields = state.Fields }
+            let (Ok result) = Validator.run v model
+            expect (Some "value", Some "nested_value") result "field"
 
-        
+        runTest "validators can be used as lists" <| fun _ ->
+            let v = Validator.from (fun v nv -> (v, nv))
+                <*> Validator.text "field"
+                <*> (Validator.withList "groupedlist" (Validator.text "inlistf0"))
+            
+            let model = { Forms.Model.init() with Fields = state.Fields }
+            let (Ok result) = Validator.run v model
+            expect (Some "value", [ Some "0_0"; Some "0_1"  ]) result "field"
+       
 
 //TODO: Add/remove to lists via commands
 //TODO: Fail when state differs from provided path
@@ -107,7 +133,7 @@ let run _ =
     test "field" "value"
     test "field2.nested" "nested_value"
     test "nonextantfield" Forms.Field.defaultValue
-    test "leafs.[0]" "leaf0"
+    test "leafs.[0]" "leaf0" //Not sure these make sense (leafs as direct descendands of lists)
     test "leafs.[1]" "leaf1"
     test "leafs.[2]" ""
     test "field2.nested_list.[0]" "nested_list_value"

@@ -158,6 +158,16 @@ module Forms
         let from (f: 'T): Validator<'T> =
             Validator (fun _ -> Ok f)
             
+        let traverse (v: List<Result<_, _>>) =
+            let reducer left right =
+                match left, right with
+                | Ok l, Ok r -> Ok (l::r)
+                | Ok _, Error e -> Error e
+                | Error e, Ok _ -> Error e
+                | Error l, Error r -> Error (l@r)
+                
+            List.foldBack reducer v (Ok [])
+            
         let apply (vf: Validator<_>) (va: Validator<_>): Validator<_> =
             let inner g =
                 let (Validator f) = vf
@@ -170,6 +180,34 @@ module Forms
                 | Error l, Error r -> Error <| l@r
             Validator inner
 
+        let withSub id (validator: Validator<_>): Validator<_> =
+            let inner g =
+                let (Validator v) = validator
+                match Map.tryFind id g with
+                | Some (Model.Group g) ->
+                    //TODO: Map error ids
+                    v g
+                | None ->
+                    let defaultGroup = Map.empty
+                    v defaultGroup
+                | _ -> Error [ (id, (fun _ -> "Invalid group type"))  ]
+            Validator inner
+            
+        let withList id (validator: Validator<'a>): Validator<'a list> =
+            let inner g =
+                let (Validator v) = validator
+                match Map.tryFind id g with
+                | Some (Model.List l) ->
+                    //TODO: Map error ids
+                    let mapper (Model.Group g) =
+                        v g
+                    List.map mapper l |> traverse
+                | None ->
+                    Ok []
+                | _ -> Error [ (id, (fun _ -> "Invalid group type"))  ]
+            Validator inner
+
+        
         let text id =
             let inner (f: Model.Group) =
                 match Map.tryFind id f with
