@@ -68,13 +68,13 @@ module SimpleFormTest =
             let v = Validator.text "field"
             let model = { Forms.Model.init() with Fields = state.Fields }
             let (Ok result) = Validator.run v model
-            expect "value" result "field"
+            expect (Some "value") result "field"
             
         runTest "validator for nonexisting scalar string" <| fun _ ->
             let v = Validator.text "non_existing"
             let model = { Forms.Model.init() with Fields = state.Fields }
             let (Ok result) = Validator.run v model
-            expect "" result "field"
+            expect None result "field"
             
         runTest "validator for two scalar fields" <| fun _ ->
             let v = Validator.from (fun l r -> l,r)
@@ -83,7 +83,7 @@ module SimpleFormTest =
             
             let model = { Forms.Model.init() with Fields = state.Fields }
             let (Ok result) = Validator.run v model
-            expect ("value", "") result "field"
+            expect (Some "value", None) result "field"
 
         runTest "Error messages are formatted by error templates" <| fun _ ->
             let v = Validator.from (fun l r -> l,r)
