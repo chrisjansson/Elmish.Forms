@@ -13,7 +13,7 @@ module Forms
 
         type Field =
             | Group of Group
-            | List of Field list
+            | List of Group list
             | Leaf of FieldState
         and Group = Map<FieldId, Field>        
 
@@ -79,7 +79,7 @@ module Forms
                         | None -> None
                     | (Path.List index, Model.List l) -> 
                         match List.tryItem index l with
-                        | Some field -> find tail field
+                        | Some field -> find tail (Field.Group field)
                         | None -> None
                     | _ -> None
 
@@ -108,9 +108,10 @@ module Forms
                     let g = Map.add n fs Map.empty
                     Field.Group g
                 | (Path.List i ::rest, Some (List l)) ->
-                    let newList = List.mapi (fun index node ->
+                    let newList = List.mapi (fun index (node: Model.Group) ->
                             if index = i then
-                                set rest (Some node) field
+                                let (Field.Group g) = set rest (Some (Model.Field.Group node)) field
+                                g
                             else
                                 node) l
                     List newList
@@ -199,7 +200,7 @@ module Forms
                 match Map.tryFind id g with
                 | Some (Model.List l) ->
                     //TODO: Map error ids
-                    let mapper (Model.Group g) =
+                    let mapper g =
                         v g
                     List.map mapper l |> traverse
                 | None ->

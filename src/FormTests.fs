@@ -3,24 +3,18 @@ module FormTests
 open Forms
 open Forms.Model
 
-
 let initial = Forms.Model.init()
 let state: Model.Model<unit> = 
     let nestedFields =
         Map.empty
         |> Map.add "nested" (Leaf "nested_value")
-        |> Map.add "nested_list" (List [(Leaf "nested_list_value")])
-    let listOfLeafs =
-        [
-            Leaf "leaf0"
-            Leaf "leaf1"
-        ]
+        |> Map.add "nested_list" (List ([ Map.ofList ["key", Leaf "nested_list_value"]]))
     let listOfGroups =
         [
-            Model.Group <| Map.ofList [
+            Map.ofList [
                 ("inlistf0", Leaf "0_0")
             ]
-            Model.Group <| Map.ofList [
+            Map.ofList [
                 ("inlistf0", Leaf "0_1")
             ]
         ]
@@ -28,7 +22,6 @@ let state: Model.Model<unit> =
         Map.empty 
         |> Map.add "field" (Leaf "value")
         |> Map.add "field2" (Model.Group nestedFields)
-        |> Map.add "leafs" (Model.List listOfLeafs)
         |> Map.add "groupedlist" (Model.List listOfGroups)
     { 
         initial with Fields = fields
@@ -133,17 +126,14 @@ let run _ =
     test "field" "value"
     test "field2.nested" "nested_value"
     test "nonextantfield" Forms.Field.defaultValue
-    test "leafs.[0]" "leaf0" //Not sure these make sense (leafs as direct descendands of lists)
-    test "leafs.[1]" "leaf1"
-    test "leafs.[2]" ""
-    test "field2.nested_list.[0]" "nested_list_value"
+    test "field2.nested_list.[0].key" "nested_list_value"
     
     testSet "field" "value2"
     testSet "field2.nested" "nested_value2"
     testSet "nonextantfield" "new"
-    testSet "leafs.[0]" "leaf0_new" //Modify existing list item
-    testSet "leafs.[1]" "leaf1_new" //Modify existing list item
-    testSet "field2.nested_list.[0]" "nested_list_value_new"
+    testSet "field2.nested_list.[0].key" "nested_list_value2"
+
+    testSet "field2.nested_list.[0].v" "nested_list_value_new"
     testSet "nonextantfield.nested" "new"
     
     SimpleFormTest.run ()
