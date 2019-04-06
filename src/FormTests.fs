@@ -43,7 +43,7 @@ let runTest (name: string) f =
 
     
 let test (fieldId: FieldId) expected =
-    let actual = Form.getField2 fieldId state
+    let actual = Form.getField fieldId state
     if actual = expected then 
         printfn "passed: getField2 %A" expected
     else 
@@ -51,12 +51,12 @@ let test (fieldId: FieldId) expected =
 
 let testSet (fieldId: FieldId) expected =
     try 
-        let get = Form.getField2 fieldId state
+        let get = Form.getField fieldId state
         if get = expected then
             printfn "precondition failed: %A already has expected value" fieldId
         else 
             let state = Form.setField fieldId state expected
-            let actual = Form.getField2 fieldId state 
+            let actual = Form.getField fieldId state 
             if actual = expected then 
                 printfn "passed: setField %A %A" fieldId expected
             else 
@@ -131,14 +131,14 @@ module ListTests =
             let state = Form.removeListItem "groupedlist" 0 state
             let result = Form.getListLength "groupedlist" state
             expect 1 result "List length"
-            let value = Form.getField2 "groupedlist.[0].inlistf0" state
+            let value = Form.getField "groupedlist.[0].inlistf0" state
             expect "0_1" value "Remaning list item value"
             
         runTest "remove item from list"  <| fun _ ->
             let state = Form.removeListItem "groupedlist.[1].inlistf1" 1 state
             let result = Form.getListLength "groupedlist.[1].inlistf1" state
             expect 1 result "List length"
-            let value = Form.getField2 "groupedlist.[1].inlistf1.[0].key" state
+            let value = Form.getField "groupedlist.[1].inlistf1.[0].key" state
             expect "second_level_list_item3" value "Remaning list item value"
         
         runTest "append item to list"  <| fun _ ->
@@ -146,7 +146,7 @@ module ListTests =
             let result = Form.getListLength "groupedlist.[1].inlistf1" state
             expect 3 result "List length"
             let state = Form.setField "groupedlist.[1].inlistf1.[2].key" state "kaka" 
-            let value = Form.getField2 "groupedlist.[1].inlistf1.[2].key" state
+            let value = Form.getField "groupedlist.[1].inlistf1.[2].key" state
             expect "kaka" value "appended list item value"       
 
 //TODO: Add/remove to lists via commands

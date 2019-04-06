@@ -61,11 +61,6 @@ module Forms
     module Form =
         open Model
         open Extensions          
-        
-        let getField (id: FieldId) (model: Model<_>): FieldState = 
-            Map.tryFind id model.Fields 
-            |> Option.map (fun (Leaf l) -> l)
-            |> Option.defaultValue Field.defaultValue
 
         let rec private find (path: Path.PathSegment list) (field: Model.Field) =
                 match (path, field) with
@@ -82,7 +77,7 @@ module Forms
                         | None -> None
                     | _ -> None
         
-        let getField2 (id: FieldId) (model: Model<_>): FieldState = 
+        let getField (id: FieldId) (model: Model<_>): FieldState = 
             let path = Path.parse id
             let field = model.Fields |> Model.Group
 
