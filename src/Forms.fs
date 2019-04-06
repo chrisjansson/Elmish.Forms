@@ -117,7 +117,6 @@ module Forms
                 
             { model with Fields = fields }
             
-            
         let removeListItem (id: FieldId) (index: int) (model: Model<_>): Model<_> =
             let replacer l =
                 l
