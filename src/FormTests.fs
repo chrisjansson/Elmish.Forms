@@ -142,9 +142,12 @@ module ListTests =
             expect "second_level_list_item3" value "Remaning list item value"
         
         runTest "append item to list"  <| fun _ ->
-            ()
-        ()
-       
+            let state = Form.appendListItem "groupedlist.[1].inlistf1" state
+            let result = Form.getListLength "groupedlist.[1].inlistf1" state
+            expect 3 result "List length"
+            let state = Form.setField "groupedlist.[1].inlistf1.[2].key" state "kaka" 
+            let value = Form.getField2 "groupedlist.[1].inlistf1.[2].key" state
+            expect "kaka" value "appended list item value"       
 
 //TODO: Add/remove to lists via commands
 //TODO: Fail when state differs from provided path

@@ -99,7 +99,7 @@ module Forms
             | Some _ -> failwith "Wrong type in list length lookup"
             | _ -> 0
             
-        let removeListItem (id: FieldId) (index: int) (model: Model<_>): Model<_> =
+        let private replaceListNode (id: FieldId) (model: Model<_>) replacer: Model<_> =
             let path = Path.parse id
             let rec set (path: Path.PathSegment list) (fields: Model.Field option) =
                 match (path, fields) with
@@ -109,11 +109,7 @@ module Forms
                     let g = Map.add n fs g
                     Field.Group g
                 | ([], Some (List l)) ->
-                    let newList =
-                        l
-                        |> List.indexed
-                        |> List.filter (fun (i, v) -> i <> index)
-                        |> List.map snd
+                    let newList = replacer l
                     List newList
                 | (Path.List i ::rest, Some (List l)) ->
                     let newList = List.mapi (fun index (node: Model.Group) ->
@@ -127,6 +123,22 @@ module Forms
             let (Field.Group fields) = set path (Some (Field.Group model.Fields))
                 
             { model with Fields = fields }
+            
+            
+        let removeListItem (id: FieldId) (index: int) (model: Model<_>): Model<_> =
+            let replacer l =
+                l
+                |> List.indexed
+                |> List.filter (fun (i, v) -> i <> index)
+                |> List.map snd
+    
+            replaceListNode id model replacer
+            
+        let appendListItem (id: FieldId) (model: Model<_>): Model<_> =
+            let replacer l =
+                List.append l [ Map.empty ]
+            
+            replaceListNode id model replacer
 
         let setField (id: FieldId) (model: Model<_>) (fieldState: FieldState): Model<_> =
             let path = Path.parse id
