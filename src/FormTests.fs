@@ -13,9 +13,11 @@ let state: Model.Model<unit> =
         [
             Map.ofList [
                 ("inlistf0", Leaf "0_0")
+                ("inlistf1", List [ Map.ofList [  "key", Leaf "second_level_list_item" ]; Map.ofList ["key", Leaf "second_level_list_item2"] ])
             ]
             Map.ofList [
                 ("inlistf0", Leaf "0_1")
+                ("inlistf1", List [ Map.ofList [  "key", Leaf "second_level_list_item3" ]; Map.ofList ["key", Leaf "second_level_list_item4"] ])
             ]
         ]
     let fields = 
@@ -118,6 +120,30 @@ module SimpleFormTest =
             let model = { Forms.Model.init() with Fields = state.Fields }
             let (Ok result) = Validator.run v model
             expect (Some "value", [ Some "0_0"; Some "0_1"  ]) result "field"
+
+module ListTests =
+    let run _ =
+        runTest "get list length"  <| fun _ ->
+            let result = Form.getListLength "groupedlist" state
+            expect 2 result "List length"
+            
+        runTest "remove item from list"  <| fun _ ->
+            let state = Form.removeListItem "groupedlist" 0 state
+            let result = Form.getListLength "groupedlist" state
+            expect 1 result "List length"
+            let value = Form.getField2 "groupedlist.[0].inlistf0" state
+            expect "0_1" value "Remaning list item value"
+            
+        runTest "remove item from list"  <| fun _ ->
+            let state = Form.removeListItem "groupedlist.[1].inlistf1" 1 state
+            let result = Form.getListLength "groupedlist.[1].inlistf1" state
+            expect 1 result "List length"
+            let value = Form.getField2 "groupedlist.[1].inlistf1.[0].key" state
+            expect "second_level_list_item3" value "Remaning list item value"
+        
+        runTest "append item to list"  <| fun _ ->
+            ()
+        ()
        
 
 //TODO: Add/remove to lists via commands
@@ -137,6 +163,7 @@ let run _ =
     testSet "nonextantfield.nested" "new"
     
     SimpleFormTest.run ()
+    ListTests.run ()
     
     
     //testSet "leafs.[2]" "" //Modify non existing list item, I think a pre-condition is adding the item to the list

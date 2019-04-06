@@ -67,8 +67,7 @@ module Forms
             |> Option.map (fun (Leaf l) -> l)
             |> Option.defaultValue Field.defaultValue
 
-        let getField2 (id: FieldId) (model: Model<_>): FieldState = 
-            let rec find (path: Path.PathSegment list) (field: Model.Field) =
+        let rec private find (path: Path.PathSegment list) (field: Model.Field) =
                 match (path, field) with
                 | ([], field) -> Some field
                 | (head::tail, field) ->
@@ -82,13 +81,52 @@ module Forms
                         | Some field -> find tail (Field.Group field)
                         | None -> None
                     | _ -> None
-
+        
+        let getField2 (id: FieldId) (model: Model<_>): FieldState = 
             let path = Path.parse id
             let field = model.Fields |> Model.Group
 
             match find path field with
             | Some (Leaf l) -> l
             | _ -> Field.defaultValue
+            
+        let getListLength (id: FieldId) (model: Model<_>): int =
+            let path = Path.parse id
+            let field = model.Fields |> Model.Group
+
+            match find path field with
+            | Some (List l) -> List.length l
+            | Some _ -> failwith "Wrong type in list length lookup"
+            | _ -> 0
+            
+        let removeListItem (id: FieldId) (index: int) (model: Model<_>): Model<_> =
+            let path = Path.parse id
+            let rec set (path: Path.PathSegment list) (fields: Model.Field option) =
+                match (path, fields) with
+                | ( Path.Node n :: rest, Some (Group g)) ->
+                    let node = Map.tryFind n g
+                    let fs = set rest node
+                    let g = Map.add n fs g
+                    Field.Group g
+                | ([], Some (List l)) ->
+                    let newList =
+                        l
+                        |> List.indexed
+                        |> List.filter (fun (i, v) -> i <> index)
+                        |> List.map snd
+                    List newList
+                | (Path.List i ::rest, Some (List l)) ->
+                    let newList = List.mapi (fun index (node: Model.Group) ->
+                            if index = i then
+                                let (Field.Group g) = set rest (Some (Model.Field.Group node))
+                                g
+                            else
+                                node) l
+                    List newList
+               
+            let (Field.Group fields) = set path (Some (Field.Group model.Fields))
+                
+            { model with Fields = fields }
 
         let setField (id: FieldId) (model: Model<_>) (fieldState: FieldState): Model<_> =
             let path = Path.parse id
