@@ -206,8 +206,12 @@ module Forms
                 let (Validator v) = validator
                 match Map.tryFind id g with
                 | Some (Model.Group g) ->
-                    //TODO: Map error ids
-                    v g
+                    match v g with
+                    | Ok r -> Ok r
+                    | Error e ->
+                        printfn "Group error"
+                        let mappedErrors = List.map (fun (errorId, f) -> id + "." + errorId, f) e
+                        Error mappedErrors
                 | None ->
                     let defaultGroup = Map.empty
                     v defaultGroup
@@ -252,6 +256,22 @@ module Forms
                 | Error e-> Error e
             Validator inner
             
+        let private tryParseInt (s: string) =
+            match System.Int32.TryParse(s) with
+            | true, i -> Some i
+            | _ -> None
+            
+        let asInt id (f: Validator<string option>) =
+            let inner (g: Model.Group) =
+                let (Validator v) = f
+                match (v g) with
+                | Ok (Some v) ->
+                    match tryParseInt v with
+                    | Some i -> Ok <| Some i
+                    | None -> Error  [ (id, (fun label -> (sprintf "%s must be an integer" label))) ]
+                | Ok None -> Ok None
+                | Error e-> Error e
+            Validator inner
            
         let run (validator: Validator<'T>) (form: Model.Model<'T>) =
             let (Validator v) = validator
