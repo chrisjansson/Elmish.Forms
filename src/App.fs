@@ -189,7 +189,7 @@ let view (model:Model) dispatch =
 Program.mkSimple init update view
     |> Program.withReact "elmish-app"
     |> Program.withConsoleTrace
-    |> Program.run
+    |> Program.runWith person
 //
-//Path.Tests.runTests ()
-//FormTests.run ()
+Path.Tests.runTests ()
+FormTests.run ()

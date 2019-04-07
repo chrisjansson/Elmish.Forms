@@ -3,28 +3,30 @@ module FormTests
 open Forms
 open Forms.Model
 
-let initial = Forms.Model.init()
-let state: Model.Model<unit> = 
+let initV = Forms.Validator.text "abc"
+
+let initial = Forms.Model.init initV
+let state: Model.Model<_> = 
     let nestedFields =
         Map.empty
         |> Map.add "nested" (Leaf "nested_value")
-        |> Map.add "nested_list" (List ([ Map.ofList ["key", Leaf "nested_list_value"]]))
+        |> Map.add "nested_list" (List ([ Map.ofList ["key", Leaf "nested_list_value"] ], Leaf ""))
     let listOfGroups =
         [
             Map.ofList [
                 ("inlistf0", Leaf "0_0")
-                ("inlistf1", List [ Map.ofList [  "key", Leaf "second_level_list_item" ]; Map.ofList ["key", Leaf "second_level_list_item2"] ])
+                ("inlistf1", Leaf "010123")
             ]
             Map.ofList [
                 ("inlistf0", Leaf "0_1")
-                ("inlistf1", List [ Map.ofList [  "key", Leaf "second_level_list_item3" ]; Map.ofList ["key", Leaf "second_level_list_item4"] ])
+                ("inlistf1", Leaf "asd")
             ]
         ]
     let fields = 
         Map.empty 
         |> Map.add "field" (Leaf "value")
         |> Map.add "field2" (Model.Group nestedFields)
-        |> Map.add "groupedlist" (Model.List listOfGroups)
+        |> Map.add "groupedlist" (Model.List (listOfGroups, Leaf ""))
     { 
         initial with Fields = fields
     }
@@ -71,13 +73,13 @@ module SimpleFormTest =
 
         runTest "validator for existing scalar string" <| fun _ ->
             let v = Validator.text "field"
-            let model = { Forms.Model.init() with Fields = state.Fields }
+            let model = { Forms.Model.init v with Fields = state.Fields }
             let (Ok result) = Validator.run v model
             expect (Some "value") result "field"
             
         runTest "validator for nonexisting scalar string" <| fun _ ->
             let v = Validator.text "non_existing"
-            let model = { Forms.Model.init() with Fields = state.Fields }
+            let model = { Forms.Model.init v with Fields = state.Fields }
             let (Ok result) = Validator.run v model
             expect None result "field"
             
@@ -86,7 +88,7 @@ module SimpleFormTest =
                 <*> Validator.text "field"
                 <*> Validator.text "field3"
             
-            let model = { Forms.Model.init() with Fields = state.Fields }
+            let model = { Forms.Model.init v with Fields = state.Fields }
             let (Ok result) = Validator.run v model
             expect (Some "value", None) result "field"
 
@@ -95,7 +97,7 @@ module SimpleFormTest =
                 <*> (Validator.text "field" |> Validator.required "field")
                 <*> (Validator.text "field3" |> Validator.required "field3")
             
-            let model = { Forms.Model.init() with Fields = state.Fields }
+            let model = { Forms.Model.init v with Fields = state.Fields }
             let (Error result) = Validator.run v model
             
             let formattedErrors =
@@ -108,7 +110,7 @@ module SimpleFormTest =
                 <*> Validator.text "field"
                 <*> (Validator.withSub "field2" (Validator.text "nested"))
             
-            let model = { Forms.Model.init() with Fields = state.Fields }
+            let model = { Forms.Model.init v with Fields = state.Fields }
             let (Ok result) = Validator.run v model
             expect (Some "value", Some "nested_value") result "field"
 
@@ -117,7 +119,7 @@ module SimpleFormTest =
                 <*> Validator.text "field"
                 <*> (Validator.withList "groupedlist" (Validator.text "inlistf0"))
             
-            let model = { Forms.Model.init() with Fields = state.Fields }
+            let model = { Forms.Model.init v with Fields = state.Fields }
             let (Ok result) = Validator.run v model
             expect (Some "value", [ Some "0_0"; Some "0_1"  ]) result "field"
 
@@ -149,6 +151,61 @@ module ListTests =
             let value = Form.getField "groupedlist.[1].inlistf1.[2].key" state
             expect "kaka" value "appended list item value"       
 
+module InitTests =
+    let run _ =
+        runTest "init text field" <| fun _ ->
+            let (Forms.Validator.Validator (_, d)) = Forms.Validator.text "test"
+            
+            let expected = Model.Group <| Map.ofList [ "test", Model.Leaf "" ]
+            
+            expect expected d "default value for single leaf"
+            
+        runTest "init two text fields" <| fun _ ->
+            let v = Validator.from (fun l r -> l,r)
+                <*> Validator.text "field"
+                <*> Validator.text "field3"
+                
+            let (Validator.Validator (_, defaultValue)) = v
+            
+            
+            let expected = Model.Group <| Map.ofList [
+                "field", Model.Leaf ""
+                "field3", Model.Leaf ""
+            ]
+            
+            expect expected defaultValue "default value for two leafs"
+
+        runTest "init subgroup" <| fun _ ->
+            let v = Validator.from (fun v nv -> (v, nv))
+                <*> Validator.text "field"
+                <*> (Validator.withSub "field2" (Validator.text "nested"))
+                
+            let (Validator.Validator (_, defaultValue)) = v
+
+            let expected = Model.Group <| Map.ofList [
+                "field", Model.Leaf ""
+                "field2", Model.Group <| Map.ofList [
+                    "nested", Model.Leaf ""
+                ]
+            ]
+            
+            expect expected defaultValue "default value for groups"
+        
+        runTest "init list" <| fun _ ->
+            let v = Validator.from (fun v nv -> (v, nv))
+                <*> Validator.text "field"
+                <*> (Validator.withList "groupedlist" (Validator.text "inlistf0"))
+                        
+            let (Validator.Validator (_, defaultValue)) = v
+                        
+            let expected = Model.Group <| Map.ofList [
+                "field", Model.Leaf ""
+                "groupedlist", Model.List <| ([], Model.Group <| Map.ofList [ "inlistf0", Model.Leaf "" ])
+            ]
+            
+            expect expected defaultValue "field"
+
+
 //TODO: Add/remove to lists via commands
 //TODO: Fail when state differs from provided path
 let run _ =
@@ -167,6 +224,7 @@ let run _ =
     
     SimpleFormTest.run ()
     ListTests.run ()
+    InitTests.run ()
     
     
     //testSet "leafs.[2]" "" //Modify non existing list item, I think a pre-condition is adding the item to the list
