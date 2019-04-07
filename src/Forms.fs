@@ -25,15 +25,6 @@ module Forms
                 IsSubmitted: bool
             }
 
-        type Validator<'a, 'b> = (Model<'b> -> ValidationResult<'a>)
-
-        type FieldDefinition<'a, 'b> = 
-            { 
-                Id: FieldId
-                Name: string
-                Validate: Validator<'a, 'b>
-            }
-
         type Msg =
             | InputChanged of FieldId * string
             | Touch of FieldId
