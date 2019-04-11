@@ -40,6 +40,48 @@ let init (validator: Validator.Validator<'a>): Model<'a> =
         IsSubmitted = false
     }
 
+let update (validator: Validator.Validator<_>) (msg:Msg) (model:Model<_>) =
+    let applyValidation (model: Model<_>) (validationResult: ValidationResult<_>) =    
+        let appendError (map: Map<FieldId, ValidationError list>) (error: KeyedValidationError): Map<FieldId, ValidationError list> =
+            let key = fst error
+            let validationError = snd error
+            if Map.containsKey key map then
+                let lst = Map.find key map
+                Map.add key (validationError :: lst) map
+            else
+                Map.add key [ validationError ] map
+        let validationErrorMap = 
+            match validationResult with
+            | Ok _ -> Map.empty
+            | Error validationErrors -> validationErrors |> List.fold appendError Map.empty
+        { model with ValidationErrors = validationErrorMap }
+
+    let validateModel (validator: Validator.Validator<_>) (model: Model<_>) =
+        Validator.run validator model |> applyValidation model
+
+    match msg with
+    | InputChanged (id, value) -> 
+        Form.setFieldValue id model value
+        |> validateModel validator
+    | Touch id -> 
+        let touched = Set.add id model.Touched
+        let model = { model with Touched = touched }
+        validateModel validator model
+    | Submit -> 
+        let model = { model with IsSubmitted = true }
+        let validationResult = Validator.run validator model
+        let model = 
+            match validationResult with
+            | Ok r -> { model with Result = Some r }
+            | Error _ -> { model with Result = None }
+        applyValidation model validationResult
+    | AppendList id ->
+        Form.appendListItem id model
+        |> validateModel validator
+    | RemoveListItem (id, index) ->
+        Form.removeListItem id index model
+        |> validateModel validator
+
 let rec private find (path: Path.PathSegment list) (field: Field) =
         match (path, field) with
         | ([], field) -> Some field

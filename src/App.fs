@@ -107,47 +107,6 @@ let person =
 //    validatePerson model
 open Form
 
-let update (msg:Msg) (model:Model) =
-    let applyValidation (model: Model) (validationResult: ValidationResult<Person>) =    
-        let appendError (map: Map<FieldId, ValidationError list>) (error: KeyedValidationError): Map<FieldId, ValidationError list> =
-            let key = fst error
-            let validationError = snd error
-            if Map.containsKey key map then
-                let lst = Map.find key map
-                Map.add key (validationError :: lst) map
-            else
-                Map.add key [ validationError ] map
-        let validationErrorMap = 
-            match validationResult with
-            | Ok _ -> Map.empty
-            | Error validationErrors -> validationErrors |> List.fold appendError Map.empty
-        { model with ValidationErrors = validationErrorMap }
-
-    let validateModel validate (model: Model) =
-        Validator.run validate model |> applyValidation model
-
-    match msg with
-    | InputChanged (id, value) -> 
-        Form.setFieldValue id model value
-        |> validateModel person
-    | Touch id -> 
-        let touched = Set.add id model.Touched
-        let model = { model with Touched = touched }
-        validateModel person model
-    | Submit -> 
-        let model = { model with IsSubmitted = true }
-        let validationResult = Validator.run person model
-        let model = 
-            match validationResult with
-            | Ok r -> { model with Result = Some r }
-            | Error _ -> { model with Result = None }
-        applyValidation model validationResult
-    | AppendList id ->
-        Form.appendListItem id model
-        |> validateModel person
-    | RemoveListItem (id, index) ->
-        Form.removeListItem id index model
-        |> validateModel person
 
 let view (model:Model) dispatch =
     let onChange field (event: Fable.Import.React.FormEvent) =
@@ -203,7 +162,7 @@ let view (model:Model) dispatch =
             ]
         ]
 
-Program.mkSimple init update view
+Program.mkSimple init (Form.update person) view
     |> Program.withReact "elmish-app"
     |> Program.withConsoleTrace
     |> Program.runWith person
