@@ -6,7 +6,7 @@ module rec Forms
         type FieldName = string
         type FieldId = string
 
-        type ValidationError = string -> string
+        type ValidationError = string
         type KeyedValidationError = FieldId * ValidationError
         type ValidationResult<'a> = Result<'a, KeyedValidationError list>
         
@@ -175,12 +175,13 @@ module rec Forms
         type Validator<'T> = Validator of ValidatorT<'T>
         and ValidatorT<'T> =
             {
-                F: (Model.Group -> Model.ValidationResult<'T>)
+                F: (string -> Model.Group -> Model.ValidationResult<'T>)
                 Default:  Model.Field
+                Label: string
             }
         
         let from (f: 'T): Validator<'T> =
-            Validator { F = (fun _ -> Ok f); Default = Model.Group Map.empty }
+            Validator { F = (fun _ _ -> Ok f); Default = Model.Group Map.empty; Label = "" }
             
         let traverse (v: List<Result<_, _>>) =
             let reducer left right =
@@ -193,11 +194,11 @@ module rec Forms
             List.foldBack reducer v (Ok [])
             
         let apply (vf: Validator<_>) (va: Validator<_>): Validator<_> =
-            let (Validator { F = f; Default = df1 }) = vf
-            let (Validator { F = a; Default = df2 }) = va
+            let (Validator { F = f; Default = df1; Label = l1 }) = vf
+            let (Validator { F = a; Default = df2; Label = l2 }) = va
             
-            let inner g =
-                match (f g, a g) with
+            let inner _ g =
+                match (f l1 g, a l2 g) with
                 | Ok rf, Ok ra -> Ok (rf ra)
                 | Ok _, Error e -> Error e
                 | Error e, Ok _ -> Error e
@@ -212,14 +213,14 @@ module rec Forms
                     Map.ofSeq seq
                 | _ -> failwith "Invalid apply"
             
-            Validator { F = inner; Default = Model.Group joinedGroups }
+            Validator { F = inner; Default = Model.Group joinedGroups; Label = "" }
 
         let withSub id (validator: Validator<_>): Validator<_> =
-            let (Validator { F = v; Default = defaultValue }) = validator
-            let inner g =
+            let (Validator { F = v; Default = defaultValue; Label = l }) = validator
+            let inner _ g =
                 match Map.tryFind id g with
                 | Some (Model.Group g) ->
-                    match v g with
+                    match v l g with
                     | Ok r -> Ok r
                     | Error e ->
                         printfn "Group error"
@@ -227,32 +228,32 @@ module rec Forms
                         Error mappedErrors
                 | None ->
                     let defaultGroup = Map.empty
-                    v defaultGroup
-                | _ -> Error [ (id, (fun _ -> "Invalid group type"))  ]
+                    v l defaultGroup
+                | _ -> Error [ (id, "Invalid group type")  ]
             
             let defaultValue =
                 Model.Group <| Map.ofList [
                     id, defaultValue
                 ]
                 
-            Validator { F = inner; Default = defaultValue }
+            Validator { F = inner; Default = defaultValue; Label = "" }
             
         let withList id (validator: Validator<'a>): Validator<'a list> =
-            let (Validator { F = v; Default = Model.Group d }) = validator
-            let inner g =
+            let (Validator { F = v; Default = Model.Group d; Label = label }) = validator
+            let inner _ g =
                 match Map.tryFind id g with
                 | Some (Model.List (l, _)) ->
                     //TODO: Map error ids
                     let mapper g =
-                        v g
+                        v label g
                     List.map mapper l |> traverse
                 | None ->
                     Ok []
-                | _ -> Error [ (id, (fun _ -> "Invalid group type"))  ]
-            Validator { F = inner; Default = Model.Group <| Map.ofList [ id, Model.List ([], d) ] }
+                | _ -> Error [ (id, "Invalid group type")  ]
+            Validator { F = inner; Default = Model.Group <| Map.ofList [ id, Model.List ([], d) ]; Label = "" }
 
         let text id =
-            let inner (f: Model.Group) =
+            let inner _ (f: Model.Group) =
                 match Map.tryFind id f with
                 | Some (Model.Leaf v) ->
                     Ok <|
@@ -261,19 +262,24 @@ module rec Forms
                         else
                             Some v
                 | None -> Ok None
-                | _ -> Error [ (id, (fun _ -> "Invalid group type"))  ]
-            Validator { F = inner; Default = Model.Group <| Map.ofList [ id, Model.Leaf "" ] }
+                | _ -> Error [ (id, "Invalid group type")  ]
+            Validator { F = inner; Default = Model.Group <| Map.ofList [ id, Model.Leaf "" ]; Label = id }
 
         let required id (f: Validator<'a option>) =
-            let (Validator { F = v; Default = d }) = f
-            let inner (g: Model.Group) =
-                match (v g) with
+            let (Validator vv) = f
+            let { F = v; Default = d } = vv
+            let inner label (g: Model.Group) =
+                match (v label g) with
                 | Ok (Some v) ->
                     Ok v
                 | Ok None ->
-                    Error [ (id, (fun label -> (sprintf "%s is required" label))) ]
+                    Error [ (id, sprintf "%s is required" label) ]
                 | Error e-> Error e
-            Validator { F = inner; Default = d }
+            Validator { F = inner; Default = d; Label = vv.Label }
+            
+        let withLabel label (f: Validator<_>) =
+            let (Validator v) = f
+            Validator { F = v.F; Default = v.Default; Label = label }
 
         let private tryParseInt (s: string) =
             match System.Int32.TryParse(s) with
@@ -281,19 +287,20 @@ module rec Forms
             | _ -> None
             
         let asInt id (f: Validator<string option>) =
-            let (Validator { F = v; Default = d }) = f
-            let inner (g: Model.Group) =
-                match (v g) with
+            let (Validator vv) = f
+            let { F = v; Default = d } = vv
+            let inner label (g: Model.Group) =
+                match (v label g) with
                 | Ok (Some v) ->
                     match tryParseInt v with
                     | Some i -> Ok <| Some i
-                    | None -> Error  [ (id, (fun label -> (sprintf "%s must be an integer" label))) ]
+                    | None -> Error  [ (id, sprintf "%s must be an integer" label) ]
                 | Ok None -> Ok None
                 | Error e-> Error e
-            Validator { F = inner; Default = d }
+            Validator { F = inner; Default = d; Label = vv.Label }
            
         let run (validator: Validator<'T>) (form: Model.Model<'T>) =
-            let (Validator { F = v }) = validator
-            v form.Fields
+            let (Validator { F = v; Label = l }) = validator
+            v l form.Fields
                        
     let (<*>) = Validator.apply

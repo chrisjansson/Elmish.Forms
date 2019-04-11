@@ -44,14 +44,14 @@ let createAddress address1 address2 =
 
 let address =
     Forms.Validator.from createAddress
-    <*> (Validator.text "address1" |> Validator.required "address1")
-    <*> (Validator.text "address2" |> Validator.required "address2")
+    <*> (Validator.text "address1" |> Validator.required "address1" |> withLabel "Address 1")
+    <*> (Validator.text "address2" |> Validator.required "address2" |> withLabel "Address 2")
 
 let person =
     Forms.Validator.from createPerson
-    <*> (Validator.text "firstName" |> Validator.required "firstName")
-    <*> (Validator.text "lastName" |> Validator.required "lastName")
-    <*> (Validator.text "age" |> Validator.asInt "age" |> Validator.required "age")
+    <*> (Validator.text "firstName" |> Validator.required "firstName" |> withLabel "First name")
+    <*> (Validator.text "lastName" |> Validator.required "lastName" |> withLabel "Last name")
+    <*> (Validator.text "age" |> Validator.asInt "age" |> Validator.required "age" |> withLabel "Age")
     <*> (Validator.withSub "address" address)
     
     
@@ -156,7 +156,7 @@ let view (model:Model) dispatch =
         if Form.hasValidationError fieldId model && showValidationMessageIfPresent then
             let message = 
                 Form.getValidationErrors fieldId model
-                |> List.fold (fun acc v -> acc + " " + (v "this should come from context")) " "
+                |> List.fold (fun acc v -> acc + " " + v) " "
             label [] [ unbox message ]
         else 
             fragment [] []
