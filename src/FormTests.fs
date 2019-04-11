@@ -15,7 +15,7 @@ let nested =
 
 let initV =
     Validator.from (fun (f: string) _-> f)
-    <*> (Validator.text "field" |> Validator.required "a")
+    <*> (Validator.text "field" |> Validator.required)
     <*> (Validator.withSub "field2" nested)
 
 
@@ -104,14 +104,13 @@ module SimpleFormTest =
 
         runTest "error messages are formatted by error templates" <| fun _ ->
             let v = Validator.from (fun l r -> l,r)
-                <*> (Validator.text "field" |> Validator.required "field")
-                <*> (Validator.text "field3" |> Validator.required "field3")
+                <*> (Validator.text "field" |> Validator.required)
+                <*> (Validator.text "field3" |> Validator.required)
             
             let model = { Forms.Model.init v with Fields = state.Fields }
             let (Error result) = Validator.run v model
             
-            let formattedErrors =
-                List.map (fun (id,template) -> id, (template id)) result
+            let formattedErrors = result
             
             expect [ "field3", "field3 is required"  ] formattedErrors "field"
 
@@ -165,7 +164,7 @@ module ListTests =
 module InitTests =
     let run _ =
         runTest "init text field" <| fun _ ->
-            let (Forms.Validator.Validator (_, d)) = Forms.Validator.text "test"
+            let (Forms.Validator.Validator {Default = d}) = Forms.Validator.text "test"
             
             let expected = Model.Group <| Map.ofList [ "test", Model.Leaf "" ]
             
@@ -176,7 +175,7 @@ module InitTests =
                 <*> Validator.text "field"
                 <*> Validator.text "field3"
                 
-            let (Validator.Validator (_, defaultValue)) = v
+            let (Validator.Validator {Default = defaultValue}) = v
             
             
             let expected = Model.Group <| Map.ofList [
@@ -191,7 +190,7 @@ module InitTests =
                 <*> Validator.text "field"
                 <*> (Validator.withSub "field2" (Validator.text "nested"))
                 
-            let (Validator.Validator (_, defaultValue)) = v
+            let (Validator.Validator {Default = defaultValue}) = v
 
             let expected = Model.Group <| Map.ofList [
                 "field", Model.Leaf ""
@@ -207,7 +206,7 @@ module InitTests =
                 <*> Validator.text "field"
                 <*> (Validator.withList "groupedlist" (Validator.text "inlistf0"))
                         
-            let (Validator.Validator (_, defaultValue)) = v
+            let (Validator.Validator {Default = defaultValue}) = v
                         
             let expected = Model.Group <| Map.ofList [
                 "field", Model.Leaf ""
