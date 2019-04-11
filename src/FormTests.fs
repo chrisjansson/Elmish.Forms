@@ -2,34 +2,48 @@ module FormTests
 
 open Forms
 open Forms.Model
+open Forms.Validator
 
-let initV = Forms.Validator.text "abc"
+let inList =
+    Validator.from (fun v -> v)
+    <*> (Validator.text "key")
+
+let nested =
+    Validator.from (fun f l -> (f, l))
+    <*> (Validator.text "nested")
+    <*> (Validator.withList "nested_list" inList)
+
+let initV =
+    Validator.from (fun (f: string) _-> f)
+    <*> (Validator.text "field" |> Validator.required "a")
+    <*> (Validator.withSub "field2" nested)
+
 
 let initial = Forms.Model.init initV
-let state: Model.Model<_> = 
-    let nestedFields =
-        Map.empty
-        |> Map.add "nested" (Leaf "nested_value")
-        |> Map.add "nested_list" (List ([ Map.ofList ["key", Leaf "nested_list_value"] ], Leaf ""))
-    let listOfGroups =
-        [
-            Map.ofList [
-                ("inlistf0", Leaf "0_0")
-                ("inlistf1", Leaf "010123")
-            ]
-            Map.ofList [
-                ("inlistf0", Leaf "0_1")
-                ("inlistf1", Leaf "asd")
-            ]
-        ]
-    let fields = 
-        Map.empty 
-        |> Map.add "field" (Leaf "value")
-        |> Map.add "field2" (Model.Group nestedFields)
-        |> Map.add "groupedlist" (Model.List (listOfGroups, Leaf ""))
-    { 
-        initial with Fields = fields
-    }
+let state: Model.Model<_> = initial
+//    let nestedFields =
+//        Map.empty
+//        |> Map.add "nested" (Leaf "nested_value")
+//        |> Map.add "nested_list" (List ([ Map.ofList ["key", Leaf "nested_list_value"] ], Leaf ""))
+//    let listOfGroups =
+//        [
+//            Map.ofList [
+//                ("inlistf0", Leaf "0_0")
+//                ("inlistf1", Leaf "010123")
+//            ]
+//            Map.ofList [
+//                ("inlistf0", Leaf "0_1")
+//                ("inlistf1", Leaf "asd")
+//            ]
+//        ]
+//    let fields = 
+//        Map.empty 
+//        |> Map.add "field" (Leaf "value")
+//        |> Map.add "field2" (Model.Group nestedFields)
+//        |> Map.add "groupedlist" (Model.List (listOfGroups, Leaf ""))
+//    { 
+//        initial with Fields = fields
+//    }
 
 let expect expected actual message =
     if expected <> actual then
@@ -44,28 +58,24 @@ let runTest (name: string) f =
         Fable.Import.Browser.console.error((sprintf "Test failed: %s\n%s" name e.Message))
 
     
-let test (fieldId: FieldId) expected =
+let test (fieldId: FieldId) expected state =
     let actual = Form.getField fieldId state
     if actual = expected then 
         printfn "passed: getField2 %A" expected
     else 
         printfn "failed: Expected: %A Actual: %A" expected actual
 
-let testSet (fieldId: FieldId) expected =
-    try 
-        let get = Form.getField fieldId state
-        if get = expected then
-            printfn "precondition failed: %A already has expected value" fieldId
+let testSet (fieldId: FieldId) expected state =
+    let get = Form.getField fieldId state
+    if get = expected then
+        printfn "precondition failed: %A already has expected value" fieldId
+    else 
+        let state = Form.setField fieldId state expected
+        let actual = Form.getField fieldId state 
+        if actual = expected then 
+            printfn "passed: setField %A %A" fieldId expected
         else 
-            let state = Form.setField fieldId state expected
-            let actual = Form.getField fieldId state 
-            if actual = expected then 
-                printfn "passed: setField %A %A" fieldId expected
-            else 
-                printfn "failed: Expected: %A Actual: %A" expected actual
-    with
-    | e ->
-        printfn "failed: %A %A" fieldId e
+            printfn "failed: Expected: %A Actual: %A" expected actual
     
 
 module SimpleFormTest =
@@ -126,30 +136,31 @@ module SimpleFormTest =
 module ListTests =
     let run _ =
         runTest "get list length"  <| fun _ ->
-            let result = Form.getListLength "groupedlist" state
-            expect 2 result "List length"
-            
-        runTest "remove item from list"  <| fun _ ->
-            let state = Form.removeListItem "groupedlist" 0 state
-            let result = Form.getListLength "groupedlist" state
-            expect 1 result "List length"
-            let value = Form.getField "groupedlist.[0].inlistf0" state
-            expect "0_1" value "Remaning list item value"
-            
-        runTest "remove item from list"  <| fun _ ->
-            let state = Form.removeListItem "groupedlist.[1].inlistf1" 1 state
-            let result = Form.getListLength "groupedlist.[1].inlistf1" state
-            expect 1 result "List length"
-            let value = Form.getField "groupedlist.[1].inlistf1.[0].key" state
-            expect "second_level_list_item3" value "Remaning list item value"
-        
+            let result = Form.getListLength "field2.nested_list" state
+            expect 0 result "List length"
+
         runTest "append item to list"  <| fun _ ->
-            let state = Form.appendListItem "groupedlist.[1].inlistf1" state
-            let result = Form.getListLength "groupedlist.[1].inlistf1" state
-            expect 3 result "List length"
-            let state = Form.setField "groupedlist.[1].inlistf1.[2].key" state "kaka" 
-            let value = Form.getField "groupedlist.[1].inlistf1.[2].key" state
+            let state = Form.appendListItem "field2.nested_list" state
+            let result = Form.getListLength "field2.nested_list" state
+            expect 1 result "List length"
+            let state = Form.setField "field2.nested_list.[0].key" state "kaka" 
+            let value = Form.getField "field2.nested_list.[0].key" state
             expect "kaka" value "appended list item value"       
+
+        let state = Form.appendListItem "field2.nested_list" state
+
+        runTest "remove item from list"  <| fun _ ->
+            let state = Form.removeListItem "field2.nested_list" 0 state
+            let result = Form.getListLength "groupedlist" state
+            expect 0 result "List length"
+            
+//        runTest "remove item from list"  <| fun _ ->
+//            let state = Form.removeListItem "groupedlist.[1].inlistf1" 1 state
+//            let result = Form.getListLength "groupedlist.[1].inlistf1" state
+//            expect 1 result "List length"
+//            let value = Form.getField "groupedlist.[1].inlistf1.[0].key" state
+//            expect "second_level_list_item3" value "Remaning list item value"
+//        
 
 module InitTests =
     let run _ =
@@ -200,7 +211,7 @@ module InitTests =
                         
             let expected = Model.Group <| Map.ofList [
                 "field", Model.Leaf ""
-                "groupedlist", Model.List <| ([], Model.Group <| Map.ofList [ "inlistf0", Model.Leaf "" ])
+                "groupedlist", Model.List <| ([], Map.ofList [ "inlistf0", Model.Leaf "" ])
             ]
             
             expect expected defaultValue "field"
@@ -209,22 +220,27 @@ module InitTests =
 //TODO: Add/remove to lists via commands
 //TODO: Fail when state differs from provided path
 let run _ =
-    test "field" "value"
-    test "field2.nested" "nested_value"
-    test "nonextantfield" Forms.Field.defaultValue
-    test "field2.nested_list.[0].key" "nested_list_value"
+    test "field" "" state
+    try
+        test "nonextantfield" "" state
+    with _ ->
+        printfn "passed: fetching nonextantfield"
+        ()
+        
+    test "field2.nested" "" state
     
-    testSet "field" "value2"
-    testSet "field2.nested" "nested_value2"
-    testSet "nonextantfield" "new"
-    testSet "field2.nested_list.[0].key" "nested_list_value2"
+    let state = Form.appendListItem "field2.nested_list" state
+    test "field2.nested_list.[0].key" "" state
 
-    testSet "field2.nested_list.[0].v" "nested_list_value_new"
-    testSet "nonextantfield.nested" "new"
+    testSet "field" "value2" state
+    testSet "field2.nested" "nested_value2" state
+    try 
+        testSet "nonextantfield" "new" state
+    with _ ->
+        printfn "passed: setting non extant field errors"
+        ()
+    testSet "field2.nested_list.[0].key" "nested_list_value2" state
     
     SimpleFormTest.run ()
     ListTests.run ()
     InitTests.run ()
-    
-    
-    //testSet "leafs.[2]" "" //Modify non existing list item, I think a pre-condition is adding the item to the list

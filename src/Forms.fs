@@ -12,7 +12,7 @@ module rec Forms
         
         type Field =
             | Group of Group
-            | List of Group list * Field
+            | List of Group list * Group
             | Leaf of FieldState
         and Group = Map<FieldId, Field>        
 
@@ -75,7 +75,7 @@ module rec Forms
 
             match find path field with
             | Some (Leaf l) -> l
-            | _ -> Field.defaultValue
+            | _ -> failwithf "Unknown path id %s" id
             
         let getListLength (id: FieldId) (model: Model<_>): int =
             let path = Path.parse id
@@ -95,34 +95,36 @@ module rec Forms
                     let fs = set rest node
                     let g = Map.add n fs g
                     Field.Group g
-                | ([], Some (List (l, _))) ->
-                    let newList = replacer l
-                    List (newList, Leaf "")
-                | (Path.List i ::rest, Some (List (l, _))) ->
+                | ([], Some (List (l, d))) ->
+                    let newList = replacer (l, d)
+                    List newList
+                | (Path.List i ::rest, Some (List (l, d))) ->
                     let newList = List.mapi (fun index (node: Model.Group) ->
                             if index = i then
                                 let (Field.Group g) = set rest (Some (Model.Field.Group node))
                                 g
                             else
                                 node) l
-                    List <| (newList, Model.Leaf "") //TODO: wut
+                    List <| (newList, d)
                
             let (Field.Group fields) = set path (Some (Field.Group model.Fields))
                 
             { model with Fields = fields }
             
         let removeListItem (id: FieldId) (index: int) (model: Model<_>): Model<_> =
-            let replacer l =
-                l
-                |> List.indexed
-                |> List.filter (fun (i, v) -> i <> index)
-                |> List.map snd
+            let replacer (l, d) =
+                let contents =
+                    l
+                    |> List.indexed
+                    |> List.filter (fun (i, v) -> i <> index)
+                    |> List.map snd
+                (contents, d)
     
             replaceListNode id model replacer
             
         let appendListItem (id: FieldId) (model: Model<_>): Model<_> =
-            let replacer l =
-                List.append l [ Map.empty ]
+            let replacer (l, d) =
+                (List.append l [ d ], d)
             
             replaceListNode id model replacer
 
@@ -150,7 +152,7 @@ module rec Forms
                                 g
                             else
                                 node) l
-                    List (newList, Leaf "")
+                    List (newList, Map.empty)
 //                | (x, _) -> failwith (sprintf "uncaught path %A" x)
             
             let (Field.Group fields) = set path (Some (Field.Group model.Fields)) fieldState
@@ -228,7 +230,7 @@ module rec Forms
             Validator (inner, defaultValue)
             
         let withList id (validator: Validator<'a>): Validator<'a list> =
-            let (Validator (v, d)) = validator
+            let (Validator (v, Model.Group d)) = validator
             let inner g =
                 match Map.tryFind id g with
                 | Some (Model.List (l, _)) ->
