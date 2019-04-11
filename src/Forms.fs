@@ -29,6 +29,8 @@ module rec Forms
             | InputChanged of FieldId * string
             | Touch of FieldId
             | Submit
+            | AppendList of FieldId
+            | RemoveListItem of FieldId * int
 
         let init (validator: Validator.Validator<'a>): Model<'a> =
             let (Validator.Validator { Default = d }) = validator
@@ -248,10 +250,15 @@ module rec Forms
             let inner _ g =
                 match Map.tryFind id g with
                 | Some (Model.List (l, _)) ->
-                    //TODO: Map error ids
-                    let mapper g =
-                        v c g
-                    List.map mapper l |> traverse
+                    let mapper index g =
+                        match v c g with
+                        | Ok r -> Ok r
+                        | Error errors ->
+                            let template eId = sprintf "%s.[%i].%s" id index eId
+                            
+                            let mappedErrors = List.map (fun (eId, m) -> (template eId, m)) errors
+                            Error mappedErrors
+                    List.mapi mapper l |> traverse
                 | None ->
                     Ok []
                 | _ -> Error [ (id, "Invalid group type")  ]

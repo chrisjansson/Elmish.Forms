@@ -13,11 +13,14 @@ type Person = {
     LastName: string
     Age: int
     Address: Address
+    Pets: Pets
 }
 and Address = {
     Address1: string
     Address2: string
 }
+
+and Pets = string list
 
 type Model = Forms.Model.Model<Person>
 
@@ -32,9 +35,8 @@ let tryParseInt (s: string) =
     | (true, i) -> Some i
     | _ -> None
     
-    
-let createPerson firstName lastName age address =
-    { FirstName = firstName; LastName = lastName; Age = age; Address = address }    
+let createPerson firstName lastName age address pets =
+    { FirstName = firstName; LastName = lastName; Age = age; Address = address; Pets = pets }    
 
 open Forms.Validator
 
@@ -42,18 +44,21 @@ let createAddress address1 address2 =
     printfn "Create address!!"
     { Address1 = address1; Address2 = address2 }    
 
+let pet = Validator.text "name" |> Validator.required
+
 let address =
-    Forms.Validator.from createAddress
+    Validator.from createAddress
     <*> (Validator.text "address1" |> Validator.required |> withLabel "Address 1")
     <*> (Validator.text "address2" |> Validator.required |> withLabel "Address 2")
 
 let person =
-    Forms.Validator.from createPerson
+    Validator.from createPerson
     <*> (Validator.text "firstName" |> Validator.required |> withLabel "First name")
     <*> (Validator.text "lastName" |> Validator.required |> withLabel "Last name")
     <*> (Validator.text "age" |> Validator.asInt |> Validator.required |> withLabel "Age")
     <*> (Validator.withSub "address" address)
-    
+    <*> (Validator.withList "pets" pet)
+
     
 //
 //let validate (model: Model): ValidationResult<Person> = 
@@ -115,7 +120,6 @@ let update (msg:Msg) (model:Model) =
             match validationResult with
             | Ok _ -> Map.empty
             | Error validationErrors -> validationErrors |> List.fold appendError Map.empty
-        printfn "%A" validationErrorMap
         { model with ValidationErrors = validationErrorMap }
 
     let validateModel validate (model: Model) =
@@ -136,8 +140,13 @@ let update (msg:Msg) (model:Model) =
             match validationResult with
             | Ok r -> { model with Result = Some r }
             | Error _ -> { model with Result = None }
-        applyValidation model validationResult        
-
+        applyValidation model validationResult
+    | AppendList id ->
+        Form.appendListItem id model
+        |> validateModel person
+    | RemoveListItem (id, index) ->
+        Form.removeListItem id index model
+        |> validateModel person
 
 let view (model:Model) dispatch =
     let onChange field (event: Fable.Import.React.FormEvent) =
@@ -176,6 +185,13 @@ let view (model:Model) dispatch =
                 formInput "Age" ageId
                 formInput "Address 1" address1Id
                 formInput "Address 2" address2Id
+                button [ Type "button"; OnClick (fun _ -> dispatch (AppendList "pets")) ] [ str "Add pet" ]
+                div [] [
+                    yield h1 [] [str "Pets"]
+                    for i = 0 to ((Form.getListLength "pets" model) - 1) do
+                        yield formInput "Name" ("pets.[" + string i + "].name")
+                ]
+                
                 button [ Type "submit" ] [ unbox "Submit" ]
             ]
 

@@ -215,8 +215,6 @@ module InitTests =
             
             expect expected defaultValue "field"
 
-
-//TODO: Add/remove to lists via commands
 //TODO: Fail when state differs from provided path
 let run _ =
     test "field" "" state
