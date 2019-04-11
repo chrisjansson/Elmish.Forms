@@ -123,28 +123,23 @@ module rec Forms
             let path = Path.parse id
             let rec set (path: Path.PathSegment list) (fields: Model.Field option) (field: FieldState) =
                 match (path, fields) with
-                | ([], Some (Leaf fs)) -> Leaf fieldState
-                //Insert when leaf node does not exist
-                | ([], None) -> Leaf fieldState
+                | ([], Some (Leaf _)) -> Leaf fieldState
                 | ( Path.Node n :: rest, Some (Group g)) ->
                     let node = Map.tryFind n g
                     let fs = set rest node field
                     let g = Map.add n fs g
                     Field.Group g
-                //Insert when group node does not exist
-                | ( Path.Node n :: rest, None) ->
-                    let fs = set rest None field
-                    let g = Map.add n fs Map.empty
-                    Field.Group g
-                | (Path.List i ::rest, Some (List (l, _))) ->
-                    let newList = List.mapi (fun index (node: Model.Group) ->
-                            if index = i then
-                                let (Field.Group g) = set rest (Some (Model.Field.Group node)) field
+                | (Path.List i ::rest, Some (List (l, d))) ->
+                    let updateListItem index item =
+                        if index = i then
+                                let (Field.Group g) = set rest (Some (Model.Field.Group item)) field
                                 g
                             else
-                                node) l
-                    List (newList, Map.empty)
-//                | (x, _) -> failwith (sprintf "uncaught path %A" x)
+                                item
+                    
+                    let newList = List.mapi updateListItem l
+                    List (newList, d)
+                | (x, _) -> failwith (sprintf "uncaught path %A" x)
             
             let (Field.Group fields) = set path (Some (Field.Group model.Fields)) fieldState
                 
