@@ -24,11 +24,11 @@ and Pets = string list
 
 type Model = Forms.Model.Model<Person>
 
-let firstNameId = FieldId.create "firstName"
-let lastNameId = FieldId.create "lastName"
-let ageId = FieldId.create "age"
-let address1Id = FieldId.create "address.address1"
-let address2Id = FieldId.create "address.address2"
+let firstNameId = "firstName"
+let lastNameId = "lastName"
+let ageId = "age"
+let address1Id = "address.address1"
+let address2Id = "address.address2"
 
 let tryParseInt (s: string) =
     match System.Int32.TryParse(s) with
@@ -127,7 +127,7 @@ let update (msg:Msg) (model:Model) =
 
     match msg with
     | InputChanged (id, value) -> 
-        Form.setField id model value
+        Form.setFieldValue id model value
         |> validateModel person
     | Touch id -> 
         let touched = Set.add id model.Touched
@@ -173,7 +173,7 @@ let view (model:Model) dispatch =
     let formInput (labelText: string) fieldId =     
         div [] [
             label [] [ unbox labelText ]
-            input [ Form.getField fieldId model |> Value; onChange fieldId |> OnChange; onBlur fieldId |> OnBlur ]
+            input [ Form.getFieldValue fieldId model |> Value; onChange fieldId |> OnChange; onBlur fieldId |> OnBlur ]
             validationLabelFor fieldId model
         ]
     

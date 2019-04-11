@@ -59,19 +59,19 @@ let runTest (name: string) f =
 
     
 let test (fieldId: FieldId) expected state =
-    let actual = Form.getField fieldId state
+    let actual = Form.getFieldValue fieldId state
     if actual = expected then 
         printfn "passed: getField2 %A" expected
     else 
         printfn "failed: Expected: %A Actual: %A" expected actual
 
 let testSet (fieldId: FieldId) expected state =
-    let get = Form.getField fieldId state
+    let get = Form.getFieldValue fieldId state
     if get = expected then
         printfn "precondition failed: %A already has expected value" fieldId
     else 
-        let state = Form.setField fieldId state expected
-        let actual = Form.getField fieldId state 
+        let state = Form.setFieldValue fieldId state expected
+        let actual = Form.getFieldValue fieldId state 
         if actual = expected then 
             printfn "passed: setField %A %A" fieldId expected
         else 
@@ -142,8 +142,8 @@ module ListTests =
             let state = Form.appendListItem "field2.nested_list" state
             let result = Form.getListLength "field2.nested_list" state
             expect 1 result "List length"
-            let state = Form.setField "field2.nested_list.[0].key" state "kaka" 
-            let value = Form.getField "field2.nested_list.[0].key" state
+            let state = Form.setFieldValue "field2.nested_list.[0].key" state "kaka" 
+            let value = Form.getFieldValue "field2.nested_list.[0].key" state
             expect "kaka" value "appended list item value"       
 
         let state = Form.appendListItem "field2.nested_list" state

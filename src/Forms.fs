@@ -3,7 +3,6 @@ module rec Forms
     module Model =  
 
         type FieldState = string
-        type FieldName = string
         type FieldId = string
 
         type ValidationError = string
@@ -42,16 +41,6 @@ module rec Forms
                 Touched = Set.empty
                 IsSubmitted = false
             }
-        
-    module FieldId =
-        open Model
-
-        let create (id: string): FieldId = id
-
-    module Field =
-        open Model
-
-        let defaultValue: FieldState = ""
 
     module Form =
         open Model
@@ -71,7 +60,7 @@ module rec Forms
                         | None -> None
                     | _ -> None
         
-        let getField (id: FieldId) (model: Model<_>): FieldState = 
+        let getFieldValue (id: FieldId) (model: Model<_>): FieldState = 
             let path = Path.parse id
             let field = model.Fields |> Model.Group
 
@@ -130,7 +119,7 @@ module rec Forms
             
             replaceListNode id model replacer
 
-        let setField (id: FieldId) (model: Model<_>) (fieldState: FieldState): Model<_> =
+        let setFieldValue (id: FieldId) (model: Model<_>) (fieldState: FieldState): Model<_> =
             let path = Path.parse id
             let rec set (path: Path.PathSegment list) (fields: Model.Field option) (field: FieldState) =
                 match (path, fields) with
