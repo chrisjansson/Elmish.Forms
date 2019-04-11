@@ -3,8 +3,7 @@ module App
 open Fable.Helpers.React
 open Fable.Helpers.React.Props
 open Fable.Core.JsInterop
-open Forms
-open Forms.Model
+open ElmishForm
 open Elmish
 open Elmish.React
 
@@ -22,7 +21,7 @@ and Address = {
 
 and Pets = string list
 
-type Model = Forms.Model.Model<Person>
+type Model = Form.Model<Person>
 
 let firstNameId = "firstName"
 let lastNameId = "lastName"
@@ -38,7 +37,8 @@ let tryParseInt (s: string) =
 let createPerson firstName lastName age address pets =
     { FirstName = firstName; LastName = lastName; Age = age; Address = address; Pets = pets }    
 
-open Forms.Validator
+open ElmishForm.Form.Validator
+open ElmishForm.Form
 
 let createAddress address1 address2 =
     printfn "Create address!!"
@@ -105,6 +105,7 @@ let person =
 //            (validateAddress validateAddress1.Validate validateAddress2.Validate)
 //
 //    validatePerson model
+open Form
 
 let update (msg:Msg) (model:Model) =
     let applyValidation (model: Model) (validationResult: ValidationResult<Person>) =    
@@ -123,7 +124,7 @@ let update (msg:Msg) (model:Model) =
         { model with ValidationErrors = validationErrorMap }
 
     let validateModel validate (model: Model) =
-        Forms.Validator.run validate model |> applyValidation model
+        Validator.run validate model |> applyValidation model
 
     match msg with
     | InputChanged (id, value) -> 
@@ -135,7 +136,7 @@ let update (msg:Msg) (model:Model) =
         validateModel person model
     | Submit -> 
         let model = { model with IsSubmitted = true }
-        let validationResult = Forms.Validator.run person model
+        let validationResult = Validator.run person model
         let model = 
             match validationResult with
             | Ok r -> { model with Result = Some r }

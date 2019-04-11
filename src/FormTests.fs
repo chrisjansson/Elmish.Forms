@@ -1,8 +1,8 @@
 module FormTests
 
-open Forms
-open Forms.Model
-open Forms.Validator
+open ElmishForm
+open ElmishForm.Form
+open ElmishForm.Form.Validator
 
 let inList =
     Validator.from (fun v -> v)
@@ -18,9 +18,8 @@ let initV =
     <*> (Validator.text "field" |> Validator.required)
     <*> (Validator.withSub "field2" nested)
 
-
-let initial = Forms.Model.init initV
-let state: Model.Model<_> = initial
+let initial = Form.init initV
+let state: Form.Model<_> = initial
 //    let nestedFields =
 //        Map.empty
 //        |> Map.add "nested" (Leaf "nested_value")
@@ -57,6 +56,7 @@ let runTest (name: string) f =
     | e ->
         Fable.Import.Browser.console.error((sprintf "Test failed: %s\n%s" name e.Message))
 
+open Elmish
     
 let test (fieldId: FieldId) expected state =
     let actual = Form.getFieldValue fieldId state
@@ -83,13 +83,13 @@ module SimpleFormTest =
 
         runTest "validator for existing scalar string" <| fun _ ->
             let v = Validator.text "field"
-            let model = { Forms.Model.init v with Fields = state.Fields }
+            let model = { Form.init v with Fields = state.Fields }
             let (Ok result) = Validator.run v model
             expect (Some "value") result "field"
             
         runTest "validator for nonexisting scalar string" <| fun _ ->
             let v = Validator.text "non_existing"
-            let model = { Forms.Model.init v with Fields = state.Fields }
+            let model = { Form.init v with Fields = state.Fields }
             let (Ok result) = Validator.run v model
             expect None result "field"
             
@@ -98,7 +98,7 @@ module SimpleFormTest =
                 <*> Validator.text "field"
                 <*> Validator.text "field3"
             
-            let model = { Forms.Model.init v with Fields = state.Fields }
+            let model = { Form.init v with Fields = state.Fields }
             let (Ok result) = Validator.run v model
             expect (Some "value", None) result "field"
 
@@ -107,7 +107,7 @@ module SimpleFormTest =
                 <*> (Validator.text "field" |> Validator.required)
                 <*> (Validator.text "field3" |> Validator.required)
             
-            let model = { Forms.Model.init v with Fields = state.Fields }
+            let model = { Form.init v with Fields = state.Fields }
             let (Error result) = Validator.run v model
             
             let formattedErrors = result
@@ -119,7 +119,7 @@ module SimpleFormTest =
                 <*> Validator.text "field"
                 <*> (Validator.withSub "field2" (Validator.text "nested"))
             
-            let model = { Forms.Model.init v with Fields = state.Fields }
+            let model = { Form.init v with Fields = state.Fields }
             let (Ok result) = Validator.run v model
             expect (Some "value", Some "nested_value") result "field"
 
@@ -128,7 +128,7 @@ module SimpleFormTest =
                 <*> Validator.text "field"
                 <*> (Validator.withList "groupedlist" (Validator.text "inlistf0"))
             
-            let model = { Forms.Model.init v with Fields = state.Fields }
+            let model = { Form.init v with Fields = state.Fields }
             let (Ok result) = Validator.run v model
             expect (Some "value", [ Some "0_0"; Some "0_1"  ]) result "field"
 
@@ -164,9 +164,9 @@ module ListTests =
 module InitTests =
     let run _ =
         runTest "init text field" <| fun _ ->
-            let (Forms.Validator.Validator {Default = d}) = Forms.Validator.text "test"
+            let (Validator.Validator {Default = d}) = Validator.text "test"
             
-            let expected = Model.Group <| Map.ofList [ "test", Model.Leaf "" ]
+            let expected = Field.Group <| Map.ofList [ "test", Leaf "" ]
             
             expect expected d "default value for single leaf"
             
@@ -178,9 +178,9 @@ module InitTests =
             let (Validator.Validator {Default = defaultValue}) = v
             
             
-            let expected = Model.Group <| Map.ofList [
-                "field", Model.Leaf ""
-                "field3", Model.Leaf ""
+            let expected = Field.Group <| Map.ofList [
+                "field", Leaf ""
+                "field3", Leaf ""
             ]
             
             expect expected defaultValue "default value for two leafs"
@@ -192,10 +192,10 @@ module InitTests =
                 
             let (Validator.Validator {Default = defaultValue}) = v
 
-            let expected = Model.Group <| Map.ofList [
-                "field", Model.Leaf ""
-                "field2", Model.Group <| Map.ofList [
-                    "nested", Model.Leaf ""
+            let expected = Field.Group <| Map.ofList [
+                "field", Leaf ""
+                "field2", Field.Group <| Map.ofList [
+                    "nested", Leaf ""
                 ]
             ]
             
@@ -208,9 +208,9 @@ module InitTests =
                         
             let (Validator.Validator {Default = defaultValue}) = v
                         
-            let expected = Model.Group <| Map.ofList [
-                "field", Model.Leaf ""
-                "groupedlist", Model.List <| ([], Map.ofList [ "inlistf0", Model.Leaf "" ])
+            let expected = Field.Group <| Map.ofList [
+                "field", Leaf ""
+                "groupedlist", List <| ([], Map.ofList [ "inlistf0", Leaf "" ])
             ]
             
             expect expected defaultValue "field"
