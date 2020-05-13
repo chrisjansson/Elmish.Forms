@@ -194,3 +194,9 @@ docs/tools/FSharp.Formatting.svclog
 .ionide.debug
 *.bak
 project.lock.json
+/.idea/.idea.Elmish.Forms/.idea/.gitignore
+/.idea/.idea.Elmish.Forms/.idea/encodings.xml
+/.idea/.idea.Elmish.Forms/.idea/indexLayout.xml
+/.idea/.idea.Elmish.Forms/.idea/misc.xml
+/.idea/.idea.Elmish.Forms/riderModule.iml
+/.idea/.idea.Elmish.Forms/.idea/vcs.xml
