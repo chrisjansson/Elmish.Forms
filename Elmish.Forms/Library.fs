@@ -17,6 +17,12 @@
 //
 // }
 
+//InitFrom from note, when combining a validator like
+// text "abc" |> initFrom (fun x -> x.A) |> asInt
+// In this case the 'InitFrom expected by asInt would type missmatches
+// The current solution is moving text "abc" |> asInt |> initFrom (fun x -> x.A)
+// In the case of "abc" |> initFrom (fun x -> x) |> asInt |> initFrom (fun x -> x.A) throw an exception from the asInt combinator since the first initFrom will be thrown away silently
+
 module Core =
     
     
@@ -135,9 +141,15 @@ module Validators =
                             |> Option.defaultValue schemaId
                         Error [ schemaId, label |> e ]
                 | Error e -> Error e
+        
+        let schema = Schema.withType _type validator.Schema
+                
+        if Option.isSome validator.InitFrom then
+            failwithf "Hydrate will the thrown away silently at %A" schema
+                
         {
             Validate = validate
-            Schema = Schema.withType _type validator.Schema
+            Schema = schema
             InitFrom = None
             Serialize = fun v -> serialize v |> validator.Serialize 
         }
