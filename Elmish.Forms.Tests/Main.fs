@@ -1,4 +1,5 @@
-﻿module ElmishForms.Tests
+﻿module ElmishForms.Tests.Main
+
 open Expecto
 
 [<EntryPoint>]
