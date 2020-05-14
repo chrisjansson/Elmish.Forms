@@ -50,12 +50,15 @@ module Core =
     and KeyedValidationError = FieldId * string list
     and ValidationErrors = KeyedValidationError list
     and ValidationErrorContext = unit
-    and Validate<'Result, 'Env> = FormFields -> ValidationContext<'Env> -> ValidationResult<'Result>
-    and ValidationContext<'Env> = { Env: 'Env; Schema: SchemaField } 
+    and Validate<'Result, 'Env> = FormFields -> Context<'Env> -> ValidationResult<'Result>
+    and Context<'Env> = { Env: 'Env; Schema: SchemaField }
+    and InitSelector<'Env, 'Result> = ('Env -> 'Result)
     and Validator<'Result, 'Env, 'InitializeFrom> =
         {
             Validate: Validate<'Result, 'Env>
             Schema: SchemaField
+            InitFrom: InitSelector<'Env, 'Result> option
+            Serialize: 'Result -> FieldState
         }
 
     and FormFields = FieldGroup
@@ -102,9 +105,16 @@ module Validators =
                     | _ -> failwith "Not implemented" //Error [ id, [] ] //Wrong type error //TODO: Test this case
                 | None -> failwith "Not implemented" //Error [ id, [] ] //Field Id not found error //TODO: Test this case
                      
+        let serialize (value: string option) =
+            match value with
+            | Some s -> FieldState.String s
+            | None -> FieldState.String ""
+                     
         {
             Validate = validate
             Schema = SchemaField.Leaf { Id = id; Label = None; Type = "string"; IsRequired = false }
+            InitFrom = None
+            Serialize = serialize
         }
 
     let private bindValidate (_type: string) (validate: 'a -> Result<'b, string -> (string list)>) (validator: Validator<'a, _, _>): Validator<'b, _, _> =
@@ -121,9 +131,14 @@ module Validators =
                             |> Option.defaultValue schemaId
                         Error [ schemaId, label |> e ]
                 | Error e -> Error e
+        
+        let serialize _ = failwith "meh"
+        
         {
             Validate = validate
             Schema = Schema.withType _type validator.Schema
+            InitFrom = None
+            Serialize = serialize
         }
         
     let private bindValidateO (_type: string) (validate: 'a -> Result<'b, string -> (string list)>) (validator: Validator<'a option, _, _>): Validator<'b option, _, _> =
@@ -142,6 +157,7 @@ module Validators =
             | Some i -> Ok i
             | None -> Error (fun label -> [ sprintf "%s should be a valid number" label ])
         bindValidateO "int" validate validator
+        
     and tryParseInt (s: string) =
         match System.Int32.TryParse(s) with
         | true, i -> Some i
@@ -180,6 +196,13 @@ module Validators =
         {
             Validate = validate
             Schema = schema
+            InitFrom = None
+            Serialize = fun s -> validator.Serialize (Some s)
+        }
+        
+    let initFrom (selector: 'Env -> 'a) (validator: Validator<'a, _, 'Env>) =
+        {
+            validator with InitFrom = Some selector
         }
 
 module Form =
@@ -191,6 +214,20 @@ module Form =
             | SchemaField.Leaf ld ->
                 Map.ofSeq [ ld.Id, Field.Leaf (FieldState.String "") ]
         
+        {
+            FormFields = data
+        }
+        
+    let initWithDefault (validator: Validator<_, _, 'Env>) (env: 'Env): Model =
+        let data = 
+            match validator.Schema with
+            | SchemaField.Leaf ld ->
+                let fieldValue =
+                    match validator.InitFrom with
+                    | Some init -> init env |> validator.Serialize
+                    | None -> FieldState.String ""
+                
+                Map.ofSeq [ ld.Id, Field.Leaf fieldValue ]
         {
             FormFields = data
         }

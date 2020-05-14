@@ -39,6 +39,17 @@ let tests =
             Expect.equal actual expected "Validation result"          
         }
         
+        test "Initializes single validator from environment" {
+            let textValidator = textValidator |> Validators.initFrom (fun _ -> Some "hello")
+            
+            let model = Form.initWithDefault textValidator ()
+
+            let actual = Form.validate textValidator () model.FormFields
+            let expected = Ok (Some "hello")
+
+            Expect.equal actual expected "Validation result"          
+        }
+        
         test "Validates required validator and formats label" {
             let requiredValidator =
                 textValidator
