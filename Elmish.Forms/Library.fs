@@ -117,7 +117,11 @@ module Validators =
             Serialize = serialize
         }
 
-    let private bindValidate (_type: string) (validate: 'a -> Result<'b, string -> (string list)>) (validator: Validator<'a, _, _>): Validator<'b, _, _> =
+    let private bindValidate
+        (_type: string)
+        (validate: 'a -> Result<'b, string -> (string list)>)
+        (serialize: 'b -> 'a)
+        (validator: Validator<'a, _, _>): Validator<'b, _, _> =
         let validate: Validate<'b, _> =
             fun (formFields: FormFields) env ->
                 match validator.Validate formFields env with
@@ -131,17 +135,18 @@ module Validators =
                             |> Option.defaultValue schemaId
                         Error [ schemaId, label |> e ]
                 | Error e -> Error e
-        
-        let serialize _ = failwith "meh"
-        
         {
             Validate = validate
             Schema = Schema.withType _type validator.Schema
             InitFrom = None
-            Serialize = serialize
+            Serialize = fun v -> serialize v |> validator.Serialize 
         }
         
-    let private bindValidateO (_type: string) (validate: 'a -> Result<'b, string -> (string list)>) (validator: Validator<'a option, _, _>): Validator<'b option, _, _> =
+    let private bindValidateO
+        (_type: string)
+        (validate: 'a -> Result<'b, string -> (string list)>)
+        (serialize: 'b -> 'a)
+        (validator: Validator<'a option, _, _>): Validator<'b option, _, _> =
         let validate (v: 'a option): Result<'b option, string -> string list> =
             match v with
             | Some v ->
@@ -149,14 +154,29 @@ module Validators =
                 |> Result.map Some
             | None -> Ok None
             
-        bindValidate _type validate validator
+        let serialize (v: 'b option): 'a option =
+            Option.map serialize v
+            
+        bindValidate
+            _type
+            validate
+            serialize
+            validator
         
     let rec asInt (validator: Validator<string option, _, _>): Validator<int option, _, _> =
         let validate (s: string) =
             match tryParseInt s with
             | Some i -> Ok i
             | None -> Error (fun label -> [ sprintf "%s should be a valid number" label ])
-        bindValidateO "int" validate validator
+        
+        let serialize (v: int) =
+            string v
+        
+        bindValidateO
+            "int"
+            validate
+            serialize
+            validator
         
     and tryParseInt (s: string) =
         match System.Int32.TryParse(s) with

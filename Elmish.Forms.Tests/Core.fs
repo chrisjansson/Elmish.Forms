@@ -100,6 +100,14 @@ let tests =
 
                     Expect.equal actual expected "Validation result"   
                 }
+            
+            test "Serializes int option to string" {
+                let actual = validator.Serialize (Some 4711)
+                
+                let expected = FieldState.String "4711"
+                
+                Expect.equal actual expected "Serializes int"
+            }
         ]
         
         testList "Text validator" [
