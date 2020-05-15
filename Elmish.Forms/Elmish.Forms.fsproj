@@ -5,8 +5,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="Library.fs" />
     <Compile Include="Extensions.fs" />
+    <Compile Include="Library.fs" />
   </ItemGroup>
 
 </Project>

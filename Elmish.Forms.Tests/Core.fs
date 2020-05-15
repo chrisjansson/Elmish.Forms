@@ -9,6 +9,7 @@ open Expecto
 let tests =
     testList "Core properties" [
         let textValidator = Validators.text "fieldId"
+        let secondValidator = Validators.text "fieldId2"
         
         test "Can add label to schema meta data" {
             let validator = Validators.withLabel "a label" textValidator
@@ -40,9 +41,10 @@ let tests =
         }
         
         test "Initializes single validator from environment" {
+            let textValidator = Validators.text "fieldId"
             let textValidator = textValidator |> Validators.initFrom (fun _ -> Some "hello")
             
-            let model = Form.initWithDefault textValidator ()
+            let model = Form.initWithDefault textValidator None
 
             let actual = Form.validate textValidator () model.FormFields
             let expected = Ok (Some "hello")
@@ -63,6 +65,81 @@ let tests =
 
             Expect.equal actual expected "Validation result"      
         }
+        
+        test "Validates applicative combination" {
+            let combined = Validator.from (fun (s1: string option) (s2: string option) -> (s1, s2))
+            let combined = Validator.apply combined textValidator
+            let combined = Validator.apply combined secondValidator
+            
+            let model = Form.init combined
+
+            let actual = Form.validate combined () model.FormFields
+            let expected = Ok (None, None)
+
+            Expect.equal actual expected "Validation result"
+        }
+        
+        test "Validates applicative combination first required" {
+            let textValidator = textValidator |> Validators.isRequired
+            let combined = Validator.from (fun (s1: string) (s2: string option) -> (s1, s2))
+            let combined = Validator.apply combined textValidator
+            let combined = Validator.apply combined secondValidator
+            
+            let model = Form.init combined
+
+            let actual = Form.validate combined () model.FormFields
+            let expected = Error [("fieldId", ["fieldId is required"])]
+
+            Expect.equal actual expected "Validation result"
+        }
+        
+        test "Validates applicative combination second required" {
+            let secondValidator = secondValidator |> Validators.isRequired
+            let combined = Validator.from (fun (s1: string option) (s2: string) -> (s1, s2))
+            let combined = Validator.apply combined textValidator
+            let combined = Validator.apply combined secondValidator
+            
+            let model = Form.init combined
+
+            let actual = Form.validate combined () model.FormFields
+            let expected = Error [("fieldId2", ["fieldId2 is required"])]
+
+            Expect.equal actual expected "Validation result"
+        }
+        
+        test "Validates applicative combination both required" {
+            let textValidator = textValidator |> Validators.isRequired
+            let secondValidator = secondValidator |> Validators.isRequired
+            let combined = Validator.from (fun (s1: string) (s2: string) -> (s1, s2))
+            let combined = Validator.apply combined textValidator
+            let combined = Validator.apply combined secondValidator
+            
+            let model = Form.init combined
+
+            let actual = Form.validate combined () model.FormFields
+            let expected = Error [("fieldId", ["fieldId is required"]); ("fieldId2", ["fieldId2 is required"])]
+
+            Expect.equal actual expected "Validation result"
+        }
+        
+        test "Initializes and validates applicative validators" {
+            let textValidator = Validators.text "fieldId"
+            let secondValidator = Validators.text "fieldId2"
+            let textValidator = textValidator |> Validators.isRequired |> Validators.initFrom (fun (x, _) -> x)
+            let secondValidator = secondValidator |> Validators.isRequired |> Validators.initFrom (fun (_, y) -> y)
+            let combined = Validator.from (fun (s1: string) (s2: string) -> (s1, s2))
+            let combined = Validator.apply combined textValidator
+            let combined = Validator.apply combined secondValidator
+            
+            let model = Form.initWithDefault combined ("hello", "world")
+
+            let actual = Form.validate combined () model.FormFields
+            let expected = Ok ("hello", "world")
+
+            Expect.equal actual expected "Validation result"
+        }
+        
+        //TODO: Validate combining two validators with the same Id
         
         //TODO: predicate validator
         
@@ -101,13 +178,13 @@ let tests =
                     Expect.equal actual expected "Validation result"   
                 }
             
-            test "Serializes int option to string" {
-                let actual = validator.Serialize (Some 4711)
-                
-                let expected = FieldState.String "4711"
-                
-                Expect.equal actual expected "Serializes int"
-            }
+//            test "Serializes int option to string" {
+//                let actual = validator.Serialize (Some (fun x -> Some x)) (Some (Some 4711))
+//                
+//                let expected = Field.Leaf <| FieldState.String "4711"
+//                
+//                Expect.equal actual expected "Serializes int"
+//            }
         ]
         
         testList "Text validator" [
