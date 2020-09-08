@@ -122,6 +122,24 @@ let tests =
             Expect.equal actual expected "Validation result"
         }
         
+        test "Validates successful applicative combination both required" {
+            let textValidator = textValidator |> Validators.isRequired
+            let secondValidator = secondValidator |> Validators.isRequired
+            let combined = Validator.from (fun (s1: string) (s2: string) -> (s1, s2))
+            let combined = Validator.apply combined textValidator
+            let combined = Validator.apply combined secondValidator
+            
+            let model =
+                Form.init combined
+                |> Form.setField "fieldId" (FieldState.String "hej")
+                |> Form.setField "fieldId2" (FieldState.String "hej")
+
+            let actual = Form.validate combined () model.FormFields
+            let expected = Ok(("hej", "hej"))
+
+            Expect.equal actual expected "Validation result"
+        }
+        
         test "Initializes and validates applicative validators" {
             let textValidator = Validators.text "fieldId"
             let secondValidator = Validators.text "fieldId2"
