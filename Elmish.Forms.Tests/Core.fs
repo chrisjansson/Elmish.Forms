@@ -202,9 +202,9 @@ let tests =
                     Expect.equal actual expected "Validation result"   
                 }
                 
+                
             for input in [ "abc"; "1.2"; "-123a" ] do
                 test ("Rejects invalid integers " + input) {
-                    
                     let model = Form.init validator
                     let model = Form.setField "fieldId" (FieldState.String input) model
 
@@ -213,14 +213,16 @@ let tests =
 
                     Expect.equal actual expected "Validation result"   
                 }
-            
-//            test "Serializes int option to string" {
-//                let actual = validator.Serialize (Some (fun x -> Some x)) (Some (Some 4711))
-//                
-//                let expected = Field.Leaf <| FieldState.String "4711"
-//                
-//                Expect.equal actual expected "Serializes int"
-//            }
+                
+            test "Initializes form with integer" {
+                    let validator = Validators.text "intId" |> Validators.asInt |> Validators.initFrom (fun (i: int) -> Some i)
+                    let model = Form.initWithDefault validator 123
+
+                    let actual = Form.validate validator () model.FormFields
+                    let expected = Ok (Some 123)
+
+                    Expect.equal actual expected "Validation result"   
+                }
         ]
         
         testList "Text validator" [
