@@ -44,6 +44,7 @@ module Core =
     type SchemaField =
         | Leaf of LeafMetaData
         | Group of GroupMetaData
+        | Type of TypeMetaData 
     and LeafMetaData =
         {
             Id: FieldId
@@ -55,6 +56,13 @@ module Core =
         {
             Type: string
             Label: string option
+            Fields: Map<FieldId, SchemaField>
+        }
+    and TypeMetaData =
+        {
+            Type: string
+            Label: string option
+            Fields: Map<FieldId, SchemaField>
         }
     
     //Validator structure
@@ -88,7 +96,7 @@ module Validator =
             Ok f
         {
             Validate = validate
-            Schema = SchemaField.Leaf { Id = ""; Type = sprintf "Custom validator form %s" (typeof<'T>.Name); IsRequired = false; Label = None } //TODO: Is leaf really correct here?
+            Schema = SchemaField.Type { Type = sprintf "Custom validator form %s" (typeof<'T>.Name); Label = None; Fields = Map.empty }
             InitFrom = None
             Serialize = fun _ _ _ -> Field.Group (Map.empty)
         }
@@ -99,11 +107,13 @@ module Validator =
             match schema with
             | SchemaField.Leaf ld -> ld.Id
             | SchemaField.Group _ -> failwith "Group has no id"
+            | SchemaField.Type _ -> failwith "Type has no id"
             
         let getLabel (schema: SchemaField) =
             match schema with
             | SchemaField.Leaf ld -> ld.Label
             | SchemaField.Group gd -> gd.Label
+            | SchemaField.Type td -> td.Label
             
         let withLabel (label: string) (schema: SchemaField) =
             match schema with
@@ -118,6 +128,12 @@ module Validator =
                         gd with Label = Some label
                     }
                     
+            | SchemaField.Type td ->
+                SchemaField.Type
+                    {
+                        td with Label = Some label
+                    }
+                    
         let withIsRequired (isRequired: bool) (schema: SchemaField) =
             match schema with
             | SchemaField.Leaf ld ->
@@ -126,16 +142,19 @@ module Validator =
                         ld with IsRequired = isRequired
                     }
             | SchemaField.Group _ -> schema
+            | SchemaField.Type _ -> schema
             
         let getType (schema: SchemaField) =
             match schema with
             | SchemaField.Leaf ld -> ld.Type
             | SchemaField.Group gd -> gd.Type
+            | SchemaField.Type td -> td.Type
             
         let withType (t: string) (schema: SchemaField) =
             match schema with
             | SchemaField.Leaf ld -> SchemaField.Leaf { ld with Type = t }
             | SchemaField.Group gd -> SchemaField.Group { gd with Type = t }
+            | SchemaField.Type td -> SchemaField.Type { td with Type = t }
     
     let apply (vf: Validator<_, _, _>) (va: Validator<_, _, _>): Validator<_, _, _> =
         let validate formFields (context: Context<_>) =
@@ -198,11 +217,32 @@ module Validator =
 //                    let hv1 = vf.Serialize vf.InitFrom None
 //                    let hv2 = va.Serialize va.InitFrom None
 //                    joinGroups hv1 hv2
+
+        let leftSchema =
+            match vf.Schema with
+            | SchemaField.Type t -> t
+            | _ -> failwith "Left validator schema should always be Type"
+        
+        let rightSchema = 
+            match va.Schema with
+            | SchemaField.Leaf l -> [ l.Id, SchemaField.Leaf l ]
+            | SchemaField.Group g -> g.Fields |> Map.toList
+            | SchemaField.Type _ -> failwith "Cannot join schema Type with Type"
+            
+        
+            
+        let schema = SchemaField.Type
+                         {
+                             Label = leftSchema.Label
+                             Type = leftSchema.Type
+                             Fields = (leftSchema.Fields |> Map.toList) @ rightSchema |> Map.ofList
+                         }
+        
         {
             Validate = validate
             InitFrom = None
             Serialize = serialize
-            Schema = SchemaField.Group { Label = None; Type = sprintf "Applicative of %s and %s" (Schema.getType va.Schema) (Schema.getType vf.Schema) }
+            Schema = schema
         }
 
 module Validators =
@@ -416,7 +456,9 @@ module Form =
             | SchemaField.Leaf ld ->
                 let value = validator.Serialize () validator.InitFrom None
                 Map.ofSeq [ ld.Id, value ]
-            | SchemaField.Group _ ->
+            | SchemaField.Group _
+            | SchemaField.Type _ ->
+
                 let value = validator.Serialize () validator.InitFrom None
                 match value with
                 | Field.Group gd -> gd
@@ -431,7 +473,8 @@ module Form =
             | SchemaField.Leaf ld ->
                 let value = validator.Serialize env validator.InitFrom None
                 Map.ofSeq [ ld.Id, value ]
-            | SchemaField.Group _ ->
+            | SchemaField.Group _
+            | SchemaField.Type _ ->
                 let value = validator.Serialize env validator.InitFrom None
                 match value with
                 | Field.Group gd -> gd

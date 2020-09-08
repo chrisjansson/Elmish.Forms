@@ -66,6 +66,24 @@ let tests =
             Expect.equal actual expected "Validation result"      
         }
         
+        test "Has combined schema" {
+            let combined = Validator.from (fun (s1: string option) (s2: string option) -> (s1, s2))
+            let combined = Validator.apply combined textValidator
+            let combined = Validator.apply combined secondValidator
+
+            let expected =
+                SchemaField.Type
+                    {
+                        Type = "Custom validator form FSharpFunc`2"
+                        Label = None
+                        Fields =
+                            [ "fieldId", textValidator.Schema; "fieldId2", secondValidator.Schema ]
+                            |> Map.ofList
+                    }
+            
+            Expect.equal combined.Schema expected "Validator schema"
+        }
+        
         test "Validates applicative combination" {
             let combined = Validator.from (fun (s1: string option) (s2: string option) -> (s1, s2))
             let combined = Validator.apply combined textValidator
