@@ -35,7 +35,7 @@ module Core =
         | Leaf of FieldState
         
     and FieldGroup = Map<FieldId, Field>
-    and FieldList = FieldGroup list * FieldGroup
+    and FieldList = FieldGroup list
     and FieldId = string
     and [<RequireQualifiedAccess>] FieldState =
         | String of string
@@ -45,7 +45,8 @@ module Core =
         | Leaf of LeafMetaData
         | Group of GroupMetaData
         | Type of TypeMetaData 
-        | Sub of SubMetaData 
+        | Sub of SubMetaData
+        | List of ListMetaData 
     and LeafMetaData =
         {
             Id: FieldId
@@ -66,6 +67,11 @@ module Core =
             Fields: Map<FieldId, SchemaField>
         }
     and SubMetaData =
+        {
+            Id: FieldId
+            SubSchema: SchemaField
+        }
+    and ListMetaData =
         {
             Id: FieldId
             SubSchema: SchemaField
@@ -275,6 +281,41 @@ module Validator =
           Validate = validate
           Schema = schema
           InitFrom = validator.InitFrom
+          Serialize = serialize
+        }
+        
+    let withList (listId: FieldId) (validator: Validator<'a, _, _>): Validator<'a list, _, _> =
+        
+        
+        let serialize env (initSelector: InitSelector<_, _> option) (value: _ option) =
+            
+            let defaultNode = Field.List []
+            match initSelector with
+            | Some initSelector ->
+                    match initSelector env with
+                    | Some initValue ->
+                        let unpackField  (field: Field) =
+                            match field with
+                            | Field.Group gd -> gd
+                            | Field.Leaf ld ->
+                                Map.ofList [ Schema.getId validator.Schema, Field.Leaf ld ]
+                            | _ -> failwithf "Unsupported nesting %A" field
+                        
+                        initValue
+                        |> List.map (fun value -> validator.Serialize value validator.InitFrom None)
+                        |> List.map unpackField
+                        |> Field.List
+                        
+                    | None ->
+                        defaultNode
+                
+            | None ->
+                defaultNode      
+        
+        {
+          Validate = fun _ _ -> failwith "not implemented"
+          Schema = SchemaField.List { Id = listId; SubSchema = validator.Schema }
+          InitFrom = None
           Serialize = serialize
         }
         
@@ -501,29 +542,17 @@ module Validators =
 module Form =
     open Core
     
-    let init (validator: Validator<_, _, _>): Model =
-        let data = 
-            match validator.Schema with
-            | SchemaField.Leaf ld ->
-                let value = validator.Serialize () validator.InitFrom None
-                Map.ofSeq [ ld.Id, value ]
-            | SchemaField.Group _
-            | SchemaField.Type _ ->
-
-                let value = validator.Serialize () validator.InitFrom None
-                match value with
-                | Field.Group gd -> gd
-                | _ -> failwith "should serialize to gd"
-        {
-            FormFields = data
-        }
-        
     let initWithDefault (validator: Validator<_, _, 'Env>) (env: 'Env): Model =
         let data = 
             match validator.Schema with
             | SchemaField.Leaf ld ->
                 let value = validator.Serialize env validator.InitFrom None
                 Map.ofSeq [ ld.Id, value ]
+            | SchemaField.List ls ->
+                let value = validator.Serialize env validator.InitFrom None
+                match value with
+                | Field.List ld -> Map.ofList [ ls.Id, value ]
+                | _ -> failwith "should serialize to gd"
             | SchemaField.Group _
             | SchemaField.Type _ ->
                 let value = validator.Serialize env validator.InitFrom None
@@ -534,6 +563,8 @@ module Form =
             FormFields = data
         }
         
+    let init (validator: Validator<_, _, _>): Model = initWithDefault validator ()     
+   
     let setField (id: FieldId) (value: FieldState) (model: Model) =
 
         let pathParts = id.Split([|'.'|])

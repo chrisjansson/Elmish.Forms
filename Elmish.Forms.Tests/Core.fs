@@ -357,4 +357,46 @@ let tests =
                 Expect.equal result (Error [("2.2", ["2 is required"])]) "Mapped error message"
             }
         ]
+    
+        testList "List of text validator" [
+            let textValidator = Validators.text "id" |> Validators.isRequired
+            
+            test "Has correct schema" {
+                let validator = Validator.withList "texts" textValidator
+                
+                let expected =
+                    SchemaField.List { Id = "texts"; SubSchema = textValidator.Schema }
+                    
+                Expect.equal validator.Schema expected "Simple list schema"
+            }
+            
+            test "Default initializes list" {
+                let validator = Validator.withList "texts" textValidator
+                
+                let expected =
+                    [
+                        "texts", Field.List [ ]
+                    ] |> Map.ofList
+                
+                let model = Form.init validator
+                                    
+                Expect.equal model.FormFields expected "Default initialized list"
+            }
+            
+            test "Initializes list from data" {
+                let validator = Validator.withList "texts" (textValidator |> Validators.initFrom (fun x -> x)) |> Validators.initFrom (fun x -> x)
+                
+                let expected =
+                    [
+                        "texts", Field.List [
+                            Map.ofList [ "id", Field.Leaf (FieldState.String "hello") ]
+                            Map.ofList [ "id", Field.Leaf (FieldState.String "world") ]
+                        ]
+                    ] |> Map.ofList
+                
+                let model = Form.initWithDefault validator [ "hello"; "world" ]
+                                    
+                Expect.equal model.FormFields expected "Default initialized list"
+            }
+        ]
     ]
