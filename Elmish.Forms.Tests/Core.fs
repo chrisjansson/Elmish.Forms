@@ -398,5 +398,29 @@ let tests =
                                     
                 Expect.equal model.FormFields expected "Default initialized list"
             }
+            
+            test "Validates list" {
+                let validator = Validator.withList "texts" (textValidator |> Validators.initFrom (fun x -> x)) |> Validators.initFrom (fun x -> x)
+                
+                let model = Form.initWithDefault validator [ "hello"; "world" ]
+                                    
+                let result = Form.validate validator () model.FormFields
+                
+                let expected = Ok ([ "hello"; "world" ])
+                
+                Expect.equal result expected "Validated result"
+            }
+            
+            test "Validates invalid list" {
+                let validator = Validator.withList "texts" (textValidator |> Validators.initFrom (fun x -> x)) |> Validators.initFrom (fun x -> x)
+                
+                let model = Form.initWithDefault validator [ "hello"; "" ]
+                                    
+                let result = Form.validate validator () model.FormFields
+                
+                let expected = Error [("texts.[1].texts", ["texts is required"])]
+                
+                Expect.equal result expected "Validated result"
+            }
         ]
     ]

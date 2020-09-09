@@ -121,6 +121,7 @@ module Validator =
             | SchemaField.Group _ -> failwith "Group has no id"
             | SchemaField.Type _ -> failwith "Type has no id"
             | SchemaField.Sub sd -> sd.Id
+            | SchemaField.List ld -> ld.Id
             
         let rec getLabel (schema: SchemaField) =
             match schema with
@@ -128,6 +129,7 @@ module Validator =
             | SchemaField.Group gd -> gd.Label
             | SchemaField.Type td -> td.Label
             | SchemaField.Sub sd -> getLabel sd.SubSchema
+            | SchemaField.List ld -> getLabel ld.SubSchema
             
         let rec withLabel (label: string) (schema: SchemaField) =
             match schema with
@@ -285,10 +287,7 @@ module Validator =
         }
         
     let withList (listId: FieldId) (validator: Validator<'a, _, _>): Validator<'a list, _, _> =
-        
-        
         let serialize env (initSelector: InitSelector<_, _> option) (value: _ option) =
-            
             let defaultNode = Field.List []
             match initSelector with
             | Some initSelector ->
@@ -312,8 +311,28 @@ module Validator =
             | None ->
                 defaultNode      
         
+        let validate: Validate<_, _> =
+            fun formFields context ->
+                let field =
+                    match Map.find listId formFields with
+                    | Field.List l -> l
+                    | _ -> failwith "Invalid field for validation"
+
+                let runValidationForIndex index fields =
+                    match validator.Validate fields context with
+                    | Ok r -> Ok r
+                    | Error e -> 
+                        let prepend (fieldId, message) = listId + ".["+ string index + "]." + fieldId, message
+                        let errors = List.map prepend e
+                        Error errors
+                        
+                field
+                |> List.mapi (fun index f -> runValidationForIndex index f) //TODO: map context appropriately, a test that checks that isRequired can label correctly should work
+                |> Result.traverse    
+                                
+        
         {
-          Validate = fun _ _ -> failwith "not implemented"
+          Validate = validate
           Schema = SchemaField.List { Id = listId; SubSchema = validator.Schema }
           InitFrom = None
           Serialize = serialize
