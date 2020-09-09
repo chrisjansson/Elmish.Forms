@@ -257,8 +257,22 @@ module Validator =
             Map.ofList [ subId, defaultNode ]
             |> Field.Group
         
+        let validate: Validate<_, _> =
+            fun formFields context ->
+                let field =
+                    match Map.find subId formFields with
+                    | Field.Group g -> g
+                    | _ -> failwith "Invalid field for validation"
+                    
+                match validator.Validate field context with
+                | Ok r -> Ok r
+                | Error e ->
+                    let prepend (fieldId, message) = subId + "." + fieldId, message
+                    let errors = List.map prepend e
+                    Error errors
+                
         {
-          Validate = validator.Validate
+          Validate = validate
           Schema = schema
           InitFrom = validator.InitFrom
           Serialize = serialize
@@ -465,6 +479,24 @@ module Validators =
         {
             validator with InitFrom = Some (fun e -> selector e |> Some)
         }
+        
+    
+    let mapInit (selector: 'EnvIn -> 'EnvOut) (validator: Validator<_, _,'EnvOut>): Validator<_, _, 'EnvIn> =
+        let initFrom =
+            match validator.InitFrom with
+            | Some f ->
+                Some (fun e -> f (selector e))
+            | None -> None
+        
+        let serialize (env: 'EnvIn) (_: InitSelector<'EnvIn, _> option) _ =
+            let mapped: 'EnvOut = selector env
+            validator.Serialize mapped validator.InitFrom None
+        {
+            InitFrom = initFrom
+            Schema = validator.Schema
+            Validate = validator.Validate
+            Serialize = serialize
+        }
 
 module Form =
     open Core
@@ -503,10 +535,32 @@ module Form =
         }
         
     let setField (id: FieldId) (value: FieldState) (model: Model) =
-        let newFormFields = 
-            model.FormFields
-            |> Map.find id
-            |> (fun _ -> Map.add id (Field.Leaf value) model.FormFields)        
+
+        let pathParts = id.Split([|'.'|])
+            
+        let rec setRecursive (pathParts: string array) (fields: Field) =
+            match pathParts with
+            | [||] -> failwithf "Invalid path %s" id
+            | [| id |] ->
+                match fields with
+                | Field.Group g ->
+                    g
+                    |> Map.find id
+                    |> (fun _ -> Map.add id (Field.Leaf value) g)
+                    |> Field.Group
+                | _ -> failwithf "Invalid path %s" id
+            | _ ->
+                let head = pathParts.[0]
+                let tail = pathParts.[1..]
+                match fields with
+                | Field.Group g ->
+                    g
+                    |> Map.find head
+                    |> (fun f -> Map.add head (setRecursive tail f) g)
+                    |> Field.Group
+                | _ -> failwithf "Invalid path %s" id
+        
+        let (Field.Group newFormFields) = setRecursive pathParts (Field.Group model.FormFields)
         { model with FormFields = newFormFields }
         
     let validate (validator: Validator<'r, 'env, _>) (env: 'env) (formFields: FormFields): ValidationResult<'r> =

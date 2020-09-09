@@ -307,10 +307,54 @@ let tests =
                 Expect.equal model expectedModel "Default initialized model"
             }
             
-//            test "Validates correctly" {
-//                let initialized = Form.init
-//                
-//                Form.setField "1.1" (FieldState.String "11")
-//            }
+            test "Initializes with hydrate" {
+                let nestedValidator = Validator.from (fun (a: string) (b: string) -> (a, b))
+                let nestedValidator = Validator.apply nestedValidator (Validators.text "1" |> Validators.isRequired |> Validators.initFrom (fun (a, _) -> a))
+                let nestedValidator: Validator<string * string, _, string * string> = Validator.apply nestedValidator (Validators.text "2" |> Validators.isRequired |> Validators.initFrom (fun (_, b) -> b))
+                
+                let parentValidator = Validator.from (fun (a: string * string) (b: string * string) -> (a, b))
+                let parentValidator = Validator.apply parentValidator (Validator.withSub "1" nestedValidator |> Validators.mapInit (fun (a, _) -> a))
+                let parentValidator = Validator.apply parentValidator (Validator.withSub "2" nestedValidator |> Validators.mapInit (fun (_, b) -> b))
+                
+                let model = Form.initWithDefault parentValidator (("1", "2"), ("3", "4"))
+                
+                let expectedModel: Model =
+                    let subValidator1Defaults = Map.ofSeq [ "1", Field.Leaf (FieldState.String "1"); "2", Field.Leaf (FieldState.String "2") ]
+                    let subValidator2Defaults = Map.ofSeq [ "1", Field.Leaf (FieldState.String "3"); "2", Field.Leaf (FieldState.String "4") ]
+                    {
+                        FormFields = Map.ofSeq [ "1", Field.Group subValidator1Defaults; "2", Field.Group subValidator2Defaults]
+                    }
+                    
+                Expect.equal model expectedModel "Initialized model"
+            }
+            
+            test "Validates correctly" {
+                let initialized = Form.init parentValidator
+                
+                let model =
+                    initialized
+                    |> Form.setField "1.1" (FieldState.String "11")
+                    |> Form.setField "1.2" (FieldState.String "12")
+                    |> Form.setField "2.1" (FieldState.String "21")
+                    |> Form.setField "2.2" (FieldState.String "22")
+                    
+                let result = Form.validate parentValidator () model.FormFields
+                
+                Expect.equal result (Ok (("11", "12"), ("21", "22"))) "Validated result"
+            }
+            
+            test "Maps error message correctly" {
+                let initialized = Form.init parentValidator
+                
+                let model =
+                    initialized
+                    |> Form.setField "1.1" (FieldState.String "11")
+                    |> Form.setField "1.2" (FieldState.String "12")
+                    |> Form.setField "2.1" (FieldState.String "21")
+                    
+                let result = Form.validate parentValidator () model.FormFields
+                
+                Expect.equal result (Error [("2.2", ["2 is required"])]) "Mapped error message"
+            }
         ]
     ]
