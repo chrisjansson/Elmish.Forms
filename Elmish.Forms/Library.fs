@@ -45,6 +45,7 @@ module Core =
         | Leaf of LeafMetaData
         | Group of GroupMetaData
         | Type of TypeMetaData 
+        | Sub of SubMetaData 
     and LeafMetaData =
         {
             Id: FieldId
@@ -63,6 +64,11 @@ module Core =
             Type: string
             Label: string option
             Fields: Map<FieldId, SchemaField>
+        }
+    and SubMetaData =
+        {
+            Id: FieldId
+            SubSchema: SchemaField
         }
     
     //Validator structure
@@ -108,14 +114,16 @@ module Validator =
             | SchemaField.Leaf ld -> ld.Id
             | SchemaField.Group _ -> failwith "Group has no id"
             | SchemaField.Type _ -> failwith "Type has no id"
+            | SchemaField.Sub sd -> sd.Id
             
-        let getLabel (schema: SchemaField) =
+        let rec getLabel (schema: SchemaField) =
             match schema with
             | SchemaField.Leaf ld -> ld.Label
             | SchemaField.Group gd -> gd.Label
             | SchemaField.Type td -> td.Label
+            | SchemaField.Sub sd -> getLabel sd.SubSchema
             
-        let withLabel (label: string) (schema: SchemaField) =
+        let rec withLabel (label: string) (schema: SchemaField) =
             match schema with
             | SchemaField.Leaf ld ->
                 SchemaField.Leaf
@@ -133,6 +141,11 @@ module Validator =
                     {
                         td with Label = Some label
                     }
+            | SchemaField.Sub sd ->
+                SchemaField.Sub
+                    {
+                        sd with SubSchema = withLabel label sd.SubSchema
+                    }
                     
         let withIsRequired (isRequired: bool) (schema: SchemaField) =
             match schema with
@@ -143,18 +156,21 @@ module Validator =
                     }
             | SchemaField.Group _ -> schema
             | SchemaField.Type _ -> schema
+            | SchemaField.Sub _ -> schema
             
-        let getType (schema: SchemaField) =
+        let rec getType (schema: SchemaField) =
             match schema with
             | SchemaField.Leaf ld -> ld.Type
             | SchemaField.Group gd -> gd.Type
             | SchemaField.Type td -> td.Type
+            | SchemaField.Sub td -> sprintf "Sub with %s" (getType td.SubSchema)
             
         let withType (t: string) (schema: SchemaField) =
             match schema with
             | SchemaField.Leaf ld -> SchemaField.Leaf { ld with Type = t }
             | SchemaField.Group gd -> SchemaField.Group { gd with Type = t }
             | SchemaField.Type td -> SchemaField.Type { td with Type = t }
+            | SchemaField.Sub _ -> schema
     
     let apply (vf: Validator<_, _, _>) (va: Validator<_, _, _>): Validator<_, _, _> =
         let validate formFields (context: Context<_>) =
@@ -186,7 +202,12 @@ module Validator =
                 ]
                 
                 Field.Group map
-            | _ -> failwith "Unknown apply combination"
+            | Field.Group gl, Field.Group gr ->
+                let l = Map.toList gl
+                let r = Map.toList gr
+                Map.ofList (l @ r)
+                |> Field.Group
+            | _ -> failwithf "Unknown apply combination %A - %A" g1 g2
             
         let serialize env (initSelector: InitSelector<_, _> option) value =
             let hv1 =
@@ -199,24 +220,6 @@ module Validator =
                 | Some hf1 -> (hf1 env) |> va.Serialize env None
                 | None -> va.Serialize env None None
             joinGroups hv1 hv2
-            
-            
-//            match initSelector, env with
-//            | Some initSelector, Some env ->
-//                let env = initSelector env
-//                match env with
-//                | Some env ->
-//                    let hv1 = vf.Serialize vf.InitFrom (Some env)
-//                    let hv2 = va.Serialize va.InitFrom (Some env)
-//                    joinGroups hv1 hv2
-//                | None ->
-//                    let hv1 = vf.Serialize vf.InitFrom None
-//                    let hv2 = va.Serialize va.InitFrom None
-//                    joinGroups hv1 hv2
-//            | _ -> 
-//                    let hv1 = vf.Serialize vf.InitFrom None
-//                    let hv2 = va.Serialize va.InitFrom None
-//                    joinGroups hv1 hv2
 
         let leftSchema =
             match vf.Schema with
@@ -226,10 +229,9 @@ module Validator =
         let rightSchema = 
             match va.Schema with
             | SchemaField.Leaf l -> [ l.Id, SchemaField.Leaf l ]
+            | SchemaField.Sub s -> [ s.Id, SchemaField.Sub s ]
             | SchemaField.Group g -> g.Fields |> Map.toList
-            | SchemaField.Type _ -> failwith "Cannot join schema Type with Type"
-            
-        
+            | SchemaField.Type t -> Map.toList t.Fields
             
         let schema = SchemaField.Type
                          {
@@ -245,6 +247,23 @@ module Validator =
             Schema = schema
         }
 
+    let withSub (subId: FieldId) (validator: Validator<_, _, _>): Validator<_, _, _> =
+        
+        let schema = SchemaField.Sub { Id = subId; SubSchema = validator.Schema }
+        
+        let serialize env (initSelector: InitSelector<_, _> option) (value: _ option) =
+            let defaultNode = validator.Serialize env initSelector value
+            
+            Map.ofList [ subId, defaultNode ]
+            |> Field.Group
+        
+        {
+          Validate = validator.Validate
+          Schema = schema
+          InitFrom = validator.InitFrom
+          Serialize = serialize
+        }
+        
 module Validators =
     open Core
     open Validator

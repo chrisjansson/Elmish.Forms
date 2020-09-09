@@ -268,4 +268,49 @@ let tests =
                     Expect.equal actual expected "Validation result"       
                 }
         ]
+        
+        testList "Sub validators" [
+            let nestedValidator = Validator.from (fun (a: string) (b: string) -> (a, b))
+            let nestedValidator = Validator.apply nestedValidator (Validators.text "1" |> Validators.isRequired)
+            let nestedValidator = Validator.apply nestedValidator (Validators.text "2" |> Validators.isRequired)
+            
+            let parentValidator = Validator.from (fun (a: string * string) (b: string * string) -> (a, b))
+            let parentValidator = Validator.apply parentValidator (Validator.withSub "1" nestedValidator)
+            let parentValidator = Validator.apply parentValidator (Validator.withSub "2" nestedValidator)
+            
+            test "Has correct schema for sub validator" {
+                let expected =
+                    SchemaField.Type
+                        {
+                            Type = "Custom validator form FSharpFunc`2"
+                            Label = None
+                            Fields =
+                                [
+                                    "1", SchemaField.Sub { Id = "1"; SubSchema = nestedValidator.Schema }
+                                    "2", SchemaField.Sub { Id = "2"; SubSchema = nestedValidator.Schema }
+                                ]
+                                |> Map.ofList
+                        }
+                Expect.equal parentValidator.Schema expected "Sub validator schema"
+            }
+            
+            test "Initializes form" {
+                let model = Form.init parentValidator
+                
+                
+                let expectedModel: Model =
+                    let subValidatorDefaults = Map.ofSeq [ "1", Field.Leaf (FieldState.String ""); "2", Field.Leaf (FieldState.String "") ]
+                    {
+                        FormFields = Map.ofSeq [ "1", Field.Group subValidatorDefaults; "2", Field.Group subValidatorDefaults]
+                    }
+                    
+                Expect.equal model expectedModel "Default initialized model"
+            }
+            
+//            test "Validates correctly" {
+//                let initialized = Form.init
+//                
+//                Form.setField "1.1" (FieldState.String "11")
+//            }
+        ]
     ]
