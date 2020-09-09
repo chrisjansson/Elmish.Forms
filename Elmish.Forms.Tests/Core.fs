@@ -257,7 +257,7 @@ let tests =
                 Expect.equal actual expected "Validation result"       
             }
             
-            for (name, input) in [ "preceeding", "  abc"; "succeeding", "abc   " ] do
+            for (name, input) in [ "preceding", "  abc"; "succeeding", "abc   " ] do
                 test ("Trims whitespace " + name) {
                     let model = Form.init textValidator
                     let model = Form.setField "fieldId" (FieldState.String input) model
