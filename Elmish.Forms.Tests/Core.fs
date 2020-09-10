@@ -423,4 +423,76 @@ let tests =
                 Expect.equal result expected "Validated result"
             }
         ]
+        
+        testList "List of complex validator" [
+            let textValidator = Validators.text "id" |> Validators.isRequired |> Validators.initFrom (fun (a, _) -> a)
+            let textValidator2 = Validators.text "id2" |> Validators.isRequired |> Validators.initFrom (fun (_, b) -> b)
+            
+            let complexValidator =
+                Validator.from (fun a b -> (a, b))
+                |> (fun v -> Validator.apply v textValidator)
+                |> (fun v -> Validator.apply v textValidator2)
+            
+            test "Has correct schema" {
+                let validator = Validator.withList "complex" complexValidator
+                
+                let expected =
+                    SchemaField.List { Id = "complex"; SubSchema = complexValidator.Schema }
+                    
+                Expect.equal validator.Schema expected "Complex list validator schema"
+            }
+//            
+            test "Default initializes list" {
+                let validator = Validator.withList "complex" complexValidator
+                
+                let expected =
+                    [
+                        "complex", Field.List [ ]
+                    ] |> Map.ofList
+                
+                let model = Form.init validator
+                                    
+                Expect.equal model.FormFields expected "Default initialized list"
+            }
+
+            test "Initializes list from data" {
+                let validator = Validator.withList "complex" complexValidator |> Validators.initFrom (fun x -> x)
+                
+                let expected =
+                    [
+                        "complex", Field.List [
+                            Map.ofList [ "id", Field.Leaf (FieldState.String "hello"); "id2", Field.Leaf (FieldState.String "world") ]
+                        ]
+                    ] |> Map.ofList
+                
+                let model = Form.initWithDefault validator [ "hello", "world" ]
+                                    
+                Expect.equal model.FormFields expected "Default initialized list"
+            }
+
+            test "Validates list" {
+                let validator = Validator.withList "complex" complexValidator |> Validators.initFrom (fun x -> x)
+                
+                let model = Form.initWithDefault validator [ "hello", "world" ]
+                                    
+                let result = Form.validate validator () model.FormFields
+                
+                let expected = Ok ([ "hello", "world" ])
+                
+                Expect.equal result expected "Validated result"
+            }
+            
+            test "Validates invalid list" {
+                let validator = Validator.withList "complex" complexValidator |> Validators.initFrom (fun x -> x)
+                
+                let model = Form.initWithDefault validator [ "hello", "" ]
+                                    
+                let result = Form.validate validator () model.FormFields
+                
+                let expected = Error [("complex.[0].id2", ["id2 is required"])]
+                
+                Expect.equal result expected "Validated result"
+            }
+        ]
+    
     ]

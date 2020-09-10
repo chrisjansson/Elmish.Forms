@@ -329,7 +329,6 @@ module Validator =
                 field
                 |> List.mapi (fun index f -> runValidationForIndex index f) //TODO: map context appropriately, a test that checks that isRequired can label correctly should work
                 |> Result.traverse    
-                                
         
         {
           Validate = validate
