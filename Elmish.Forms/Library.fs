@@ -1,5 +1,7 @@
 ﻿namespace Elmish.Forms
 
+open System.Text.RegularExpressions
+
 //Validation error formatter
 // 'ValidationErrorContext -> string list
 
@@ -35,7 +37,7 @@ module Core =
         | Leaf of FieldState
         
     and FieldGroup = Map<FieldId, Field>
-    and FieldList = FieldGroup list
+    and FieldList = FieldGroup list //TODO: change to Field list?
     and FieldId = string
     and [<RequireQualifiedAccess>] FieldState =
         | String of string
@@ -601,14 +603,37 @@ module Form =
             | _ ->
                 let head = pathParts.[0]
                 let tail = pathParts.[1..]
-                match fields with
-                | Field.Group g ->
-                    g
-                    |> Map.find head
-                    |> (fun f -> Map.add head (setRecursive tail f) g)
-                    |> Field.Group
-                | _ -> failwithf "Invalid path %s" id
-        
+                
+                let tryFindListIndex =
+                    let r = Regex("\[([0-9+])\]")
+                    let matches = r.Matches(head)
+                    if matches.Count = 0 then
+                        None
+                    else
+                        Some (int (matches.[0].Groups.[1].Value))
+                
+                match tryFindListIndex with
+                | None -> 
+                
+                    match fields with
+                    | Field.Group g ->
+                        g
+                        |> Map.find head
+                        |> (fun f -> Map.add head (setRecursive tail f) g)
+                        |> Field.Group
+                    | _ -> failwithf "Invalid path %s, %A" id fields
+                | Some index ->
+                    match fields with
+                    | Field.List l ->
+                        let modify node =
+                            match setRecursive tail (Field.Group node) with
+                            | Field.Group g -> g
+                            | _ -> failwith "Must return group"
+                        List.modifyI modify index l
+                        |> Field.List
+                    | _ -> failwithf "Invalid path %s, %A" id fields
+                    
+                    
         let (Field.Group newFormFields) = setRecursive pathParts (Field.Group model.FormFields)
         { model with FormFields = newFormFields }
         

@@ -12,3 +12,17 @@ module Result =
             | Error l, Error r -> Error (l@r)
             
         List.foldBack reducer v (Ok [])
+
+[<RequireQualifiedAccess>]
+module List =
+    let modifyI selector index list =
+        let map i element =
+            if i = index then
+                selector element
+            else
+                element
+        
+        List.mapi map list
+        
+        
+        

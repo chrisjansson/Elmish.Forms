@@ -422,6 +422,52 @@ let tests =
                 
                 Expect.equal result expected "Validated result"
             }
+
+//            test "Add list item" {
+//                let validator = Validator.withList "texts" (textValidator |> Validators.initFrom (fun x -> x)) |> Validators.initFrom (fun x -> x)
+//                
+//                let model =
+//                    Form.initWithDefault validator [ ]
+//                    |> Form.setField "texts.[0].id" (FieldState.String "hello")
+//                    |> Form.setField "texts.[1].id" (FieldState.String "world")
+//                                    
+//                let result = Form.validate validator () model.FormFields
+//                
+//                let expected = Ok ([ "hello"; "world" ])
+//                
+//                Expect.equal result expected "Validated result"
+//            }
+            
+//            test "Remove list item" {
+//                let validator = Validator.withList "texts" (textValidator |> Validators.initFrom (fun x -> x)) |> Validators.initFrom (fun x -> x)
+//                
+//                let model =
+//                    Form.initWithDefault validator [ ]
+//                    |> Form.setField "texts.[0].id" (FieldState.String "hello")
+//                    |> Form.setField "texts.[1].id" (FieldState.String "world")
+//                                    
+//                let result = Form.validate validator () model.FormFields
+//                
+//                let expected = Ok ([ "hello"; "world" ])
+//                
+//                Expect.equal result expected "Validated result"
+//            }
+
+                        
+            test "Validates, set values" {
+                let validator = Validator.withList "texts" (textValidator |> Validators.initFrom (fun x -> x)) |> Validators.initFrom (fun x -> x)
+                
+                let model =
+                    Form.initWithDefault validator [ ""; "" ]
+                    |> Form.setField "texts.[0].id" (FieldState.String "hello")
+                    |> Form.setField "texts.[1].id" (FieldState.String "world")
+                                    
+                let result = Form.validate validator () model.FormFields
+                
+                let expected = Ok ([ "hello"; "world" ])
+                
+                Expect.equal result expected "Validated result"
+            }
         ]
         
         testList "List of complex validator" [
@@ -441,7 +487,7 @@ let tests =
                     
                 Expect.equal validator.Schema expected "Complex list validator schema"
             }
-//            
+            
             test "Default initializes list" {
                 let validator = Validator.withList "complex" complexValidator
                 
