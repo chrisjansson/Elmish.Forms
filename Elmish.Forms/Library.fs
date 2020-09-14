@@ -664,12 +664,12 @@ module Form =
    
     let setField (id: FieldId) (value: FieldState) (model: Model) =
 
-        let pathParts = id.Split([|'.'|])
+        let pathParts = Validator.Path.parse id
             
-        let rec setRecursive (pathParts: string array) (fields: Field) =
+        let rec setRecursive (pathParts: Path list) (fields: Field) =
             match pathParts with
-            | [||] -> failwithf "Invalid path %s" id
-            | [| id |] ->
+            | [] -> failwithf "Invalid path %s" id
+            | [ Path.Node id ] ->
                 match fields with
                 | Field.Group g ->
                     g
@@ -677,29 +677,17 @@ module Form =
                     |> (fun _ -> Map.add id (Field.Leaf value) g)
                     |> Field.Group
                 | _ -> failwithf "Invalid path %s" id
-            | _ ->
-                let head = pathParts.[0]
-                let tail = pathParts.[1..]
-                
-                let tryFindListIndex =
-                    let r = Regex("\[([0-9+])\]")
-                    let matches = r.Matches(head)
-                    if matches.Count = 0 then
-                        None
-                    else
-                        Some (int (matches.[0].Groups.[1].Value))
-                
-                match tryFindListIndex with
-                | None -> 
-                    match fields with
-                    | Field.Group g ->
-                        g
-                        |> Map.find head
-                        |> (fun f -> Map.add head (setRecursive tail f) g)
-                        |> Field.Group
-                    | _ -> failwithf "Invalid path %s, %A" id fields
-                | Some index ->
-                    match fields with
+            | (Path.Node head)::tail ->
+                match fields with
+                | Field.Group g ->
+                    g
+                    |> Map.find head
+                    |> (fun f -> Map.add head (setRecursive tail f) g)
+                    |> Field.Group
+                | _ -> failwithf "Invalid path %s, %A" id fields
+            | (Path.List (head, index))::tail ->
+                let updateList (field: Field) =
+                    match field with
                     | Field.List l ->
                         let modify node =
                             match setRecursive tail (Field.Group node) with
@@ -708,7 +696,13 @@ module Form =
                         List.modifyI modify index l
                         |> Field.List
                     | _ -> failwithf "Invalid path %s, %A" id fields
-                    
+                match fields with
+                | Field.Group g ->
+                    g
+                    |> Map.find head
+                    |> (fun f -> Map.add head (updateList f) g)
+                    |> Field.Group
+                | _ -> failwithf "Invalid path %s, %A" id fields
                     
         let (Field.Group newFormFields) = setRecursive pathParts (Field.Group model.FormFields)
         { model with FormFields = newFormFields }

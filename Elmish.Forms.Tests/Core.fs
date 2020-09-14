@@ -466,8 +466,8 @@ let tests =
                 
                 let model =
                     Form.initWithDefault validator [ ""; "" ]
-                    |> Form.setField "texts.[0].id" (FieldState.String "hello")
-                    |> Form.setField "texts.[1].id" (FieldState.String "world")
+                    |> Form.setField "texts[0].id" (FieldState.String "hello")
+                    |> Form.setField "texts[1].id" (FieldState.String "world")
                                     
                 let result = Form.validate validator () model.FormFields
                 
