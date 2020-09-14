@@ -543,6 +543,38 @@ let tests =
                 
                 Expect.equal result expected "Validated result"
             }
+            
+            test "Add list item" {
+                let validator = Validator.withList "complex" complexValidator |> Validators.initFrom (fun x -> x)
+                
+                let model =
+                    Form.initWithDefault validator [ ]
+                    |> Form.addListItem "complex" validator
+                                    
+                let result = Form.validate validator () model.FormFields
+                
+                let expected = Error [
+                    ("complex.[0].id", ["id is required"])
+                    ("complex.[0].id2", ["id2 is required"])
+                ]
+                
+                Expect.equal result expected "Validated result"
+            }
+
+            test "Remove list item" {
+                let validator = Validator.withList "complex" complexValidator |> Validators.initFrom (fun x -> x)
+                
+                let model =
+                    Form.initWithDefault validator [ ]
+                    |> Form.addListItem "complex" validator
+                    |> Form.removeListItem "complex" 0
+                                    
+                let result = Form.validate validator () model.FormFields
+                
+                let expected = Ok []
+                
+                Expect.equal result expected "Validated result"
+            }
         ]
     
     ]
