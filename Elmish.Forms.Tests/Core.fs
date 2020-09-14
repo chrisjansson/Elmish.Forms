@@ -429,35 +429,34 @@ let tests =
                 Expect.equal result expected "Validated result"
             }
 
-//            test "Add list item" {
-//                let validator = Validator.withList "texts" (textValidator |> Validators.initFrom (fun x -> x)) |> Validators.initFrom (fun x -> x)
-//                
-//                let model =
-//                    Form.initWithDefault validator [ ]
-//                    |> Form.addListItem "texts"
-//                                    
-//                let result = Form.validate validator () model.FormFields
-//                
-//                let expected = Error [("texts.[0].texts", ["texts is required"])]
-//                
-//                Expect.equal result expected "Validated result"
-//            }
-//            
-//            test "Remove list item" {
-//                let validator = Validator.withList "texts" (textValidator |> Validators.initFrom (fun x -> x)) |> Validators.initFrom (fun x -> x)
-//                
-//                let model =
-//                    Form.initWithDefault validator [ ]
-//                    |> Form.setField "texts.[0].id" (FieldState.String "hello")
-//                    |> Form.setField "texts.[1].id" (FieldState.String "world")
-//                                    
-//                let result = Form.validate validator () model.FormFields
-//                
-//                let expected = Ok ([ "hello"; "world" ])
-//                
-//                Expect.equal result expected "Validated result"
-//            }
+            test "Add list item" {
+                let validator = Validator.withList "texts" (textValidator |> Validators.initFrom (fun x -> x)) |> Validators.initFrom (fun x -> x)
+                
+                let model =
+                    Form.initWithDefault validator [ ]
+                    |> Form.addListItem "texts" validator
+                                    
+                let result = Form.validate validator () model.FormFields
+                
+                let expected = Error [("texts.[0].texts", ["texts is required"])]
+                
+                Expect.equal result expected "Validated result"
+            }
 
+            test "Remove list item" {
+                let validator = Validator.withList "texts" (textValidator |> Validators.initFrom (fun x -> x)) |> Validators.initFrom (fun x -> x)
+                
+                let model =
+                    Form.initWithDefault validator [ ]
+                    |> Form.addListItem "texts" validator
+                    |> Form.removeListItem "texts" 0
+                                    
+                let result = Form.validate validator () model.FormFields
+                
+                let expected = Ok []
+                
+                Expect.equal result expected "Validated result"
+            }
                         
             test "Validates, set values" {
                 let validator = Validator.withList "texts" (textValidator |> Validators.initFrom (fun x -> x)) |> Validators.initFrom (fun x -> x)

@@ -752,44 +752,99 @@ module Form =
                 | _ -> failwithf "Invalid schema path %A" path
         inner path validator.Schema
             
-    let addListItem (fullPath: FieldId) (model: Model) (validator: Validator<_, _, _>) =
+    let addListItem (fullPath: FieldId) (validator: Validator<_, _, _>) (model: Model) =
         
         let path = Validator.Path.parse fullPath
         let schema = getSchemaFromPath fullPath validator
+        let defaultAtPath =
+            match getDefaultForSchema schema with
+            | Field.Group g -> g
+            | Field.Leaf l ->
+                Map.ofList [
+                    Validator.Schema.getId schema, Field.Leaf l
+                ]
+            | x -> failwithf "expected group from default %A" x
+        
+        let rec setRecursive (pathParts: Path list) (fields: Field) =
+            match pathParts with
+            | [] ->
+                match fields with
+                | Field.List l ->
+                    List.append l [ defaultAtPath ]
+                    |> Field.List
+                | _ -> failwithf "Expected to find list %A" fullPath
+            | head::tail ->
+                match head with
+                | Path.List (s, index) ->
+                    match fields with
+                    | Field.List l ->
+                        let modify node =
+                            match setRecursive tail (Field.Group node) with
+                            | Field.Group g -> g
+                            | _ -> failwith "Must return group"
+                        List.modifyI modify index l
+                        |> Field.List
+                    | _ -> failwithf "Invalid path %s, %A" fullPath fields
+                | Path.Node head -> 
+                    match fields with
+                    | Field.Group g ->
+                        g
+                        |> Map.find head
+                        |> (fun f -> Map.add head (setRecursive tail f) g)
+                        |> Field.Group
+                    | _ -> failwithf "Invalid path %s, %A" fullPath fields
+        let field = setRecursive path (Field.Group model.FormFields)
 
-                
-        failwith "todo"
-                
-//        
-//        let rec setRecursive (pathParts: string array) (fields: Field) =
-//            match pathParts with
-//            | [||] ->
-//                match fields with
-//                | Field.List l ->
-//                    l.
-//                | _ -> failwithf "Expected to find list %A" fullPath
-//            | _ ->
-//                let head = pathParts.[0]
-//                let tail = pathParts.[1..]
-//                match tryFindListIndex head with
-//                | None -> 
-//                    match fields with
-//                    | Field.Group g ->
-//                        g
-//                        |> Map.find head
-//                        |> (fun f -> Map.add head (setRecursive tail f) g)
-//                        |> Field.Group
-//                    | _ -> failwithf "Invalid path %s, %A" fullPath fields
-//                | Some index ->
-//                    match fields with
-//                    | Field.List l ->
-//                        let modify node =
-//                            match setRecursive tail (Field.Group node) with
-//                            | Field.Group g -> g
-//                            | _ -> failwith "Must return group"
-//                        List.modifyI modify index l
-//                        |> Field.List
-//                    | _ -> failwithf "Invalid path %s, %A" fullPath fields
+        let fields =
+            match field with
+            | Field.Group g -> g
+            | _ -> failwith "expected group from set"
+    
+        { model with FormFields = fields }
+        
+    let removeListItem (fullPath: FieldId) (index: int) (model: Model) =
+        
+        let path = Validator.Path.parse fullPath
+        
+        let rec setRecursive (pathParts: Path list) (fields: Field) =
+            match pathParts with
+            | [] ->
+                match fields with
+                | Field.List l ->
+                    l
+                    |> List.indexed
+                    |> List.filter (fun (i, e) -> i <> index)
+                    |> List.map (fun (_, e) -> e)
+                    |> Field.List
+                | _ -> failwithf "Expected to find list %A" fullPath
+            | head::tail ->
+                match head with
+                | Path.List (s, index) ->
+                    match fields with
+                    | Field.List l ->
+                        let modify node =
+                            match setRecursive tail (Field.Group node) with
+                            | Field.Group g -> g
+                            | _ -> failwith "Must return group"
+                        List.modifyI modify index l
+                        |> Field.List
+                    | _ -> failwithf "Invalid path %s, %A" fullPath fields
+                | Path.Node head -> 
+                    match fields with
+                    | Field.Group g ->
+                        g
+                        |> Map.find head
+                        |> (fun f -> Map.add head (setRecursive tail f) g)
+                        |> Field.Group
+                    | _ -> failwithf "Invalid path %s, %A" fullPath fields
+        let field = setRecursive path (Field.Group model.FormFields)
+
+        let fields =
+            match field with
+            | Field.Group g -> g
+            | _ -> failwith "expected group from set"
+    
+        { model with FormFields = fields }
         
     let validate (validator: Validator<'r, 'env, _>) (env: 'env) (formFields: FormFields): ValidationResult<'r> =
         validator.Validate formFields { Env = env; Schema = validator.Schema } 
