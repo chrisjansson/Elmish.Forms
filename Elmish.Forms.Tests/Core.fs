@@ -270,11 +270,11 @@ let tests =
         ]
         
         testList "Sub validators" [
-            let nestedValidator = Validator.from (fun (a: string) (b: string) -> (a, b))
+            let nestedValidator = Validator.fromNamed "nested" (fun (a: string) (b: string) -> (a, b))
             let nestedValidator = Validator.apply nestedValidator (Validators.text "1" |> Validators.isRequired)
             let nestedValidator = Validator.apply nestedValidator (Validators.text "2" |> Validators.isRequired)
             
-            let parentValidator = Validator.from (fun (a: string * string) (b: string * string) -> (a, b))
+            let parentValidator = Validator.fromNamed "parent" (fun (a: string * string) (b: string * string) -> (a, b))
             let parentValidator = Validator.apply parentValidator (Validator.withSub "1" nestedValidator)
             let parentValidator = Validator.apply parentValidator (Validator.withSub "2" nestedValidator)
             
@@ -282,7 +282,7 @@ let tests =
                 let expected =
                     SchemaField.Type
                         {
-                            Type = "Custom validator form FSharpFunc`2"
+                            Type = "parent"
                             Label = None
                             Fields =
                                 [
@@ -297,11 +297,17 @@ let tests =
             test "Initializes form" {
                 let model = Form.init parentValidator
                 
-                
                 let expectedModel: Model =
-                    let subValidatorDefaults = Map.ofSeq [ "1", Field.Leaf (FieldState.String ""); "2", Field.Leaf (FieldState.String "") ]
+                    let subValidatorDefaults = Map.ofSeq [
+                        "1", Field.Leaf (FieldState.String "")
+                        "2", Field.Leaf (FieldState.String "")
+                    ]
+                    
                     {
-                        FormFields = Map.ofSeq [ "1", Field.Group subValidatorDefaults; "2", Field.Group subValidatorDefaults]
+                        FormFields = Map.ofSeq [
+                            "1", Field.Group subValidatorDefaults
+                            "2", Field.Group subValidatorDefaults
+                        ]
                     }
                     
                 Expect.equal model expectedModel "Default initialized model"
@@ -428,16 +434,15 @@ let tests =
 //                
 //                let model =
 //                    Form.initWithDefault validator [ ]
-//                    |> Form.setField "texts.[0].id" (FieldState.String "hello")
-//                    |> Form.setField "texts.[1].id" (FieldState.String "world")
+//                    |> Form.addListItem "texts"
 //                                    
 //                let result = Form.validate validator () model.FormFields
 //                
-//                let expected = Ok ([ "hello"; "world" ])
+//                let expected = Error [("texts.[0].texts", ["texts is required"])]
 //                
 //                Expect.equal result expected "Validated result"
 //            }
-            
+//            
 //            test "Remove list item" {
 //                let validator = Validator.withList "texts" (textValidator |> Validators.initFrom (fun x -> x)) |> Validators.initFrom (fun x -> x)
 //                

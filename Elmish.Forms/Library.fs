@@ -102,6 +102,11 @@ module Core =
             FormFields: FieldGroup
         }
 
+    [<RequireQualifiedAccess>]
+    type Path =
+        | List of string * int
+        | Node of string
+
 module Validator =
     open Core
 
@@ -114,7 +119,16 @@ module Validator =
             InitFrom = None
             Serialize = fun _ _ _ -> Field.Group (Map.empty)
         }
-
+        
+    let fromNamed (name: string) (f: 'T): Validator<'T, 'Env, 'InitFrom> =
+        let validate _ (_: Context<'Env>) =
+            Ok f
+        {
+            Validate = validate
+            Schema = SchemaField.Type { Type = name; Label = None; Fields = Map.empty }
+            InitFrom = None
+            Serialize = fun _ _ _ -> Field.Group (Map.empty)
+        }
     
     module Schema =
         let getId (schema: SchemaField) =
@@ -181,6 +195,26 @@ module Validator =
             | SchemaField.Group gd -> SchemaField.Group { gd with Type = t }
             | SchemaField.Type td -> SchemaField.Type { td with Type = t }
             | SchemaField.Sub _ -> schema
+    
+    module Path =
+        let private tryParseListAccess node =
+            let r = Regex("(.+)\[([0-9+])\]")
+            let matches = r.Matches(node)
+            if matches.Count = 0 then
+                None
+            else
+                Some (matches.[0].Groups.[1].Value, int (matches.[0].Groups.[2].Value))
+        
+        let parse (path: FieldId) =
+            let pathParts = path.Split([|'.'|])
+            
+            [
+                for part in pathParts do
+                    match tryParseListAccess part with
+                    | Some (id, index) -> Path.List (id, index)
+                    | None -> Path.Node part
+            ]
+
     
     let apply (vf: Validator<_, _, _>) (va: Validator<_, _, _>): Validator<_, _, _> =
         let validate formFields (context: Context<_>) =
@@ -535,7 +569,7 @@ module Validators =
                                 
                 validator.Serialize env None serializedValue
         }
-        
+                
     let initFrom (selector: 'Env -> 'a) (validator: Validator<'a, _, 'Env>) =
         {
             validator with InitFrom = Some (fun e -> selector e |> Some)
@@ -562,6 +596,34 @@ module Validators =
 module Form =
     open Core
     
+    let rec private getDefaultForSchema (schema: SchemaField) =
+        match schema with
+        | SchemaField.Leaf l ->
+            Field.Leaf (FieldState.String "")
+        | SchemaField.Type t ->
+             t.Fields
+             |> Map.toList
+             |> List.map (fun (id, field) -> id, getDefaultForSchema field)
+             |> Map.ofList
+             |> Field.Group
+        | SchemaField.Group g ->
+             g.Fields
+             |> Map.toList
+             |> List.map (fun (id, field) -> id, getDefaultForSchema field)
+             |> Map.ofList
+             |> Field.Group
+        | SchemaField.Sub s ->
+            getDefaultForSchema s.SubSchema
+//            Map.ofList [
+//                s.Id, getDefaultForSchema s.SubSchema
+//            ]
+//            |> Field.Group
+        | SchemaField.List l ->
+            Map.ofList [
+                l.Id, Field.List []
+            ]
+            |> Field.Group
+    
     let initWithDefault (validator: Validator<_, _, 'Env>) (env: 'Env): Model =
         let data = 
             match validator.Schema with
@@ -583,7 +645,19 @@ module Form =
             FormFields = data
         }
         
-    let init (validator: Validator<_, _, _>): Model = initWithDefault validator ()     
+    let init (validator: Validator<_, _, _>): Model =
+        
+        let formFields =
+            match getDefaultForSchema validator.Schema with
+            | Field.Group g -> g
+            | Field.Leaf l ->
+                let id = Validator.Schema.getId validator.Schema
+                Map.ofList [ id, Field.Leaf l ]
+            | _ -> failwith "Expects group when default initializing"
+        
+        {
+            FormFields = formFields
+        }
    
     let setField (id: FieldId) (value: FieldState) (model: Model) =
 
@@ -614,7 +688,6 @@ module Form =
                 
                 match tryFindListIndex with
                 | None -> 
-                
                     match fields with
                     | Field.Group g ->
                         g
@@ -636,6 +709,87 @@ module Form =
                     
         let (Field.Group newFormFields) = setRecursive pathParts (Field.Group model.FormFields)
         { model with FormFields = newFormFields }
+        
+    let private tryFindListIndex node =
+        let r = Regex("\[([0-9+])\]")
+        let matches = r.Matches(node)
+        if matches.Count = 0 then
+            None
+        else
+            Some (int (matches.[0].Groups.[1].Value))
+        
+    let private getSchemaFromPath (path: FieldId) (validator: Validator<_, _, _>) =
+        let path = Validator.Path.parse path
+        
+        let rec inner (pathParts: Path list) (schema: SchemaField) =
+            if pathParts.Length = 0 then
+                failwith "Empty path"
+            else
+                match (schema, pathParts) with
+                | SchemaField.Leaf l, [ Path.Node leadId ] ->
+                    if l.Id = leadId then
+                        SchemaField.Leaf l
+                    else
+                        failwith "Invalid leaf id"
+                | SchemaField.Group g, (Path.Node head)::[] ->
+                    Map.find head g.Fields
+                | SchemaField.Group g, (Path.Node head)::tail ->
+                    let schema = Map.find head g.Fields
+                    inner tail schema
+                | SchemaField.Sub { Id = subId; SubSchema = schema }, (Path.Node head)::[] when subId = head ->
+                    schema
+                | SchemaField.Sub { Id = subId; SubSchema = schema }, (Path.Node head)::tail when subId = head ->
+                    inner tail schema
+                | SchemaField.List { Id = subId; SubSchema = schema }, (Path.Node head)::[] when subId = head ->
+                    schema
+                | SchemaField.List { Id = subId; SubSchema = schema }, (Path.Node head)::tail when subId = head ->
+                    inner tail schema
+                | SchemaField.Type g, (Path.Node head)::[] ->
+                    Map.find head g.Fields
+                | SchemaField.Type g, (Path.Node head)::tail ->
+                    let schema = Map.find head g.Fields
+                    inner tail schema
+                | _ -> failwithf "Invalid schema path %A" path
+        inner path validator.Schema
+            
+    let addListItem (fullPath: FieldId) (model: Model) (validator: Validator<_, _, _>) =
+        
+        let path = Validator.Path.parse fullPath
+        let schema = getSchemaFromPath fullPath validator
+
+                
+        failwith "todo"
+                
+//        
+//        let rec setRecursive (pathParts: string array) (fields: Field) =
+//            match pathParts with
+//            | [||] ->
+//                match fields with
+//                | Field.List l ->
+//                    l.
+//                | _ -> failwithf "Expected to find list %A" fullPath
+//            | _ ->
+//                let head = pathParts.[0]
+//                let tail = pathParts.[1..]
+//                match tryFindListIndex head with
+//                | None -> 
+//                    match fields with
+//                    | Field.Group g ->
+//                        g
+//                        |> Map.find head
+//                        |> (fun f -> Map.add head (setRecursive tail f) g)
+//                        |> Field.Group
+//                    | _ -> failwithf "Invalid path %s, %A" fullPath fields
+//                | Some index ->
+//                    match fields with
+//                    | Field.List l ->
+//                        let modify node =
+//                            match setRecursive tail (Field.Group node) with
+//                            | Field.Group g -> g
+//                            | _ -> failwith "Must return group"
+//                        List.modifyI modify index l
+//                        |> Field.List
+//                    | _ -> failwithf "Invalid path %s, %A" fullPath fields
         
     let validate (validator: Validator<'r, 'env, _>) (env: 'env) (formFields: FormFields): ValidationResult<'r> =
         validator.Validate formFields { Env = env; Schema = validator.Schema } 
