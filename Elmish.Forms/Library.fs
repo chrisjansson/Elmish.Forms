@@ -100,6 +100,7 @@ module Core =
     type Model =
         {
             FormFields: FieldGroup
+            Schema: SchemaField
         }
 
     [<RequireQualifiedAccess>]
@@ -643,6 +644,7 @@ module Form =
                 | _ -> failwith "should serialize to gd"
         {
             FormFields = data
+            Schema = validator.Schema
         }
         
     let init (validator: Validator<_, _, _>): Model =
@@ -657,6 +659,7 @@ module Form =
         
         {
             FormFields = formFields
+            Schema = validator.Schema
         }
    
     let setField (id: FieldId) (value: FieldState) (model: Model) =
@@ -718,7 +721,7 @@ module Form =
         else
             Some (int (matches.[0].Groups.[1].Value))
         
-    let private getSchemaFromPath (path: FieldId) (validator: Validator<_, _, _>) =
+    let private getSchemaFromPath (path: FieldId) (model: Model) =
         let path = Validator.Path.parse path
         
         let rec inner (pathParts: Path list) (schema: SchemaField) =
@@ -750,12 +753,12 @@ module Form =
                     let schema = Map.find head g.Fields
                     inner tail schema
                 | _ -> failwithf "Invalid schema path %A" path
-        inner path validator.Schema
+        inner path model.Schema
             
-    let addListItem (fullPath: FieldId) (validator: Validator<_, _, _>) (model: Model) =
+    let addListItem (fullPath: FieldId) (model: Model) =
         
         let path = Validator.Path.parse fullPath
-        let schema = getSchemaFromPath fullPath validator
+        let schema = getSchemaFromPath fullPath model
         let defaultAtPath =
             match getDefaultForSchema schema with
             | Field.Group g -> g

@@ -26,6 +26,7 @@ let tests =
             let expectedModel: Model =
                 {
                     FormFields = Map.ofSeq [ "fieldId", Field.Leaf (FieldState.String "") ]
+                    Schema = model.Schema
                 }
                 
             Expect.equal model expectedModel "Initialized model"
@@ -308,6 +309,7 @@ let tests =
                             "1", Field.Group subValidatorDefaults
                             "2", Field.Group subValidatorDefaults
                         ]
+                        Schema = model.Schema
                     }
                     
                 Expect.equal model expectedModel "Default initialized model"
@@ -329,6 +331,7 @@ let tests =
                     let subValidator2Defaults = Map.ofSeq [ "1", Field.Leaf (FieldState.String "3"); "2", Field.Leaf (FieldState.String "4") ]
                     {
                         FormFields = Map.ofSeq [ "1", Field.Group subValidator1Defaults; "2", Field.Group subValidator2Defaults]
+                        Schema = model.Schema
                     }
                     
                 Expect.equal model expectedModel "Initialized model"
@@ -434,7 +437,7 @@ let tests =
                 
                 let model =
                     Form.initWithDefault validator [ ]
-                    |> Form.addListItem "texts" validator
+                    |> Form.addListItem "texts"
                                     
                 let result = Form.validate validator () model.FormFields
                 
@@ -448,7 +451,7 @@ let tests =
                 
                 let model =
                     Form.initWithDefault validator [ ]
-                    |> Form.addListItem "texts" validator
+                    |> Form.addListItem "texts"
                     |> Form.removeListItem "texts" 0
                                     
                 let result = Form.validate validator () model.FormFields
@@ -549,7 +552,7 @@ let tests =
                 
                 let model =
                     Form.initWithDefault validator [ ]
-                    |> Form.addListItem "complex" validator
+                    |> Form.addListItem "complex"
                                     
                 let result = Form.validate validator () model.FormFields
                 
@@ -566,7 +569,7 @@ let tests =
                 
                 let model =
                     Form.initWithDefault validator [ ]
-                    |> Form.addListItem "complex" validator
+                    |> Form.addListItem "complex"
                     |> Form.removeListItem "complex" 0
                                     
                 let result = Form.validate validator () model.FormFields
