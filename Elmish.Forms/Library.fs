@@ -359,7 +359,7 @@ module Validator =
                     match validator.Validate fields context with
                     | Ok r -> Ok r
                     | Error e -> 
-                        let prepend (fieldId, message) = listId + ".["+ string index + "]." + fieldId, message
+                        let prepend (fieldId, message) = listId + "["+ string index + "]." + fieldId, message
                         let errors = List.map prepend e
                         Error errors
                         

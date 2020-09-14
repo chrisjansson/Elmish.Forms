@@ -427,7 +427,7 @@ let tests =
                                     
                 let result = Form.validate validator () model.FormFields
                 
-                let expected = Error [("texts.[1].texts", ["texts is required"])]
+                let expected = Error [("texts[1].texts", ["texts is required"])]
                 
                 Expect.equal result expected "Validated result"
             }
@@ -441,7 +441,7 @@ let tests =
                                     
                 let result = Form.validate validator () model.FormFields
                 
-                let expected = Error [("texts.[0].texts", ["texts is required"])]
+                let expected = Error [("texts[0].texts", ["texts is required"])]
                 
                 Expect.equal result expected "Validated result"
             }
@@ -542,7 +542,7 @@ let tests =
                                     
                 let result = Form.validate validator () model.FormFields
                 
-                let expected = Error [("complex.[0].id2", ["id2 is required"])]
+                let expected = Error [("complex[0].id2", ["id2 is required"])]
                 
                 Expect.equal result expected "Validated result"
             }
@@ -557,8 +557,8 @@ let tests =
                 let result = Form.validate validator () model.FormFields
                 
                 let expected = Error [
-                    ("complex.[0].id", ["id is required"])
-                    ("complex.[0].id2", ["id2 is required"])
+                    ("complex[0].id", ["id is required"])
+                    ("complex[0].id2", ["id2 is required"])
                 ]
                 
                 Expect.equal result expected "Validated result"
