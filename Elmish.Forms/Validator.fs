@@ -258,8 +258,8 @@ module Standard =
                                     Some (s.Trim())
                             
                             Ok result
-                    | _ -> failwith "Not implemented" //Error [ id, [] ] //Wrong type error //TODO: Test this case
-                | None -> failwith "Not implemented" //Error [ id, [] ] //Field Id not found error //TODO: Test this case
+                    | _ -> failwith "Not implemented"
+                | None -> failwith "Not implemented"
                      
         let serialize env (initSelector: InitSelector<_, string option> option) (value: string option option) =
             let defaultNode = FieldState.String "" |> Field.Leaf
@@ -287,7 +287,7 @@ module Standard =
             Serialize = serialize
         }
 
-    let private bindValidate
+    let bindValidate
         (_type: string)
         (validate: 'a -> Result<'b, string -> (string list)>)
         (serialize: 'b -> 'a)
@@ -336,7 +336,7 @@ module Standard =
                     validator.Serialize env None serializedValue
         }
         
-    let private bindValidateO
+    let bindValidateO
         (_type: string)
         (validate: 'a -> Result<'b, string -> (string list)>)
         (serialize: 'b -> 'a)
