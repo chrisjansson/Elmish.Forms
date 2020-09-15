@@ -64,3 +64,67 @@ let withType (t: string) (schema: SchemaField) =
     | SchemaField.Group gd -> SchemaField.Group { gd with Type = t }
     | SchemaField.Type td -> SchemaField.Type { td with Type = t }
     | SchemaField.Sub _ -> schema
+    
+    
+let rec getDefaultForSchema (schema: SchemaField) =
+    match schema with
+    | SchemaField.Leaf l ->
+        Field.Leaf (FieldState.String "")
+    | SchemaField.Type t ->
+         t.Fields
+         |> Map.toList
+         |> List.map (fun (id, field) -> id, getDefaultForSchema field)
+         |> Map.ofList
+         |> Field.Group
+    | SchemaField.Group g ->
+         g.Fields
+         |> Map.toList
+         |> List.map (fun (id, field) -> id, getDefaultForSchema field)
+         |> Map.ofList
+         |> Field.Group
+    | SchemaField.Sub s ->
+        getDefaultForSchema s.SubSchema
+//            Map.ofList [
+//                s.Id, getDefaultForSchema s.SubSchema
+//            ]
+//            |> Field.Group
+    | SchemaField.List l ->
+        Map.ofList [
+            l.Id, Field.List []
+        ]
+        |> Field.Group
+        
+    
+let getSchemaFromPath (path: FieldId) (model: Model) =
+    let path = Path.parse path
+    
+    let rec inner (pathParts: Path list) (schema: SchemaField) =
+        if pathParts.Length = 0 then
+            failwith "Empty path"
+        else
+            match (schema, pathParts) with
+            | SchemaField.Leaf l, [ Path.Node leadId ] ->
+                if l.Id = leadId then
+                    SchemaField.Leaf l
+                else
+                    failwith "Invalid leaf id"
+            | SchemaField.Group g, (Path.Node head)::[] ->
+                Map.find head g.Fields
+            | SchemaField.Group g, (Path.Node head)::tail ->
+                let schema = Map.find head g.Fields
+                inner tail schema
+            | SchemaField.Sub { Id = subId; SubSchema = schema }, (Path.Node head)::[] when subId = head ->
+                schema
+            | SchemaField.Sub { Id = subId; SubSchema = schema }, (Path.Node head)::tail when subId = head ->
+                inner tail schema
+            | SchemaField.List { Id = subId; SubSchema = schema }, (Path.Node head)::[] when subId = head ->
+                schema
+            | SchemaField.List { Id = subId; SubSchema = schema }, (Path.Node head)::tail when subId = head ->
+                inner tail schema
+            | SchemaField.Type g, (Path.Node head)::[] ->
+                Map.find head g.Fields
+            | SchemaField.Type g, (Path.Node head)::tail ->
+                let schema = Map.find head g.Fields
+                inner tail schema
+            | _ -> failwithf "Invalid schema path %A" path
+    inner path model.Schema

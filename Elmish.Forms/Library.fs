@@ -185,7 +185,6 @@ module Validator =
         
 module Validators =
     open Elmish.Forms.Types
-    open Validator
 
     let text (id: FieldId): Validator<string option, _, _> =
         let validate: Validate<string option, _> =
@@ -279,21 +278,6 @@ module Validators =
                         | None -> None
                         
                     validator.Serialize env None serializedValue
-                            
-//                    match initSelector, env with
-//                    | Some initSelector, Some env -> 
-//                        let mappedValue = initSelector env
-//                        match mappedValue with
-//                        | Some value ->
-//                            serialize value
-//                            |> Some
-//                            |> validator.Serialize validator.InitFrom
-//                        | None -> validator.Serialize validator.InitFrom None
-//                    | None, Some env ->
-//                        serialize env
-//                        |> Some
-//                        |> validator.Serialize validator.InitFrom
-//                    | _ -> validator.Serialize validator.InitFrom None
         }
         
     let private bindValidateO
@@ -384,8 +368,7 @@ module Validators =
         {
             validator with InitFrom = Some (fun e -> selector e |> Some)
         }
-        
-    
+            
     let mapInit (selector: 'EnvIn -> 'EnvOut) (validator: Validator<_, _,'EnvOut>): Validator<_, _, 'EnvIn> =
         let initFrom =
             match validator.InitFrom with
@@ -405,35 +388,7 @@ module Validators =
 
 module Form =
     open Elmish.Forms.Types
-    
-    let rec private getDefaultForSchema (schema: SchemaField) =
-        match schema with
-        | SchemaField.Leaf l ->
-            Field.Leaf (FieldState.String "")
-        | SchemaField.Type t ->
-             t.Fields
-             |> Map.toList
-             |> List.map (fun (id, field) -> id, getDefaultForSchema field)
-             |> Map.ofList
-             |> Field.Group
-        | SchemaField.Group g ->
-             g.Fields
-             |> Map.toList
-             |> List.map (fun (id, field) -> id, getDefaultForSchema field)
-             |> Map.ofList
-             |> Field.Group
-        | SchemaField.Sub s ->
-            getDefaultForSchema s.SubSchema
-//            Map.ofList [
-//                s.Id, getDefaultForSchema s.SubSchema
-//            ]
-//            |> Field.Group
-        | SchemaField.List l ->
-            Map.ofList [
-                l.Id, Field.List []
-            ]
-            |> Field.Group
-    
+
     let initWithDefault (validator: Validator<_, _, 'Env>) (env: 'Env): Model =
         let data = 
             match validator.Schema with
@@ -457,9 +412,8 @@ module Form =
         }
         
     let init (validator: Validator<_, _, _>): Model =
-        
         let formFields =
-            match getDefaultForSchema validator.Schema with
+            match Schema.getDefaultForSchema validator.Schema with
             | Field.Group g -> g
             | Field.Leaf l ->
                 let id = Schema.getId validator.Schema
@@ -514,55 +468,12 @@ module Form =
                     
         let (Field.Group newFormFields) = setRecursive pathParts (Field.Group model.FormFields)
         { model with FormFields = newFormFields }
-        
-    let private tryFindListIndex node =
-        let r = Regex("\[([0-9+])\]")
-        let matches = r.Matches(node)
-        if matches.Count = 0 then
-            None
-        else
-            Some (int (matches.[0].Groups.[1].Value))
-        
-    let private getSchemaFromPath (path: FieldId) (model: Model) =
-        let path = Path.parse path
-        
-        let rec inner (pathParts: Path list) (schema: SchemaField) =
-            if pathParts.Length = 0 then
-                failwith "Empty path"
-            else
-                match (schema, pathParts) with
-                | SchemaField.Leaf l, [ Path.Node leadId ] ->
-                    if l.Id = leadId then
-                        SchemaField.Leaf l
-                    else
-                        failwith "Invalid leaf id"
-                | SchemaField.Group g, (Path.Node head)::[] ->
-                    Map.find head g.Fields
-                | SchemaField.Group g, (Path.Node head)::tail ->
-                    let schema = Map.find head g.Fields
-                    inner tail schema
-                | SchemaField.Sub { Id = subId; SubSchema = schema }, (Path.Node head)::[] when subId = head ->
-                    schema
-                | SchemaField.Sub { Id = subId; SubSchema = schema }, (Path.Node head)::tail when subId = head ->
-                    inner tail schema
-                | SchemaField.List { Id = subId; SubSchema = schema }, (Path.Node head)::[] when subId = head ->
-                    schema
-                | SchemaField.List { Id = subId; SubSchema = schema }, (Path.Node head)::tail when subId = head ->
-                    inner tail schema
-                | SchemaField.Type g, (Path.Node head)::[] ->
-                    Map.find head g.Fields
-                | SchemaField.Type g, (Path.Node head)::tail ->
-                    let schema = Map.find head g.Fields
-                    inner tail schema
-                | _ -> failwithf "Invalid schema path %A" path
-        inner path model.Schema
             
     let addListItem (fullPath: FieldId) (model: Model) =
-        
         let path = Path.parse fullPath
-        let schema = getSchemaFromPath fullPath model
+        let schema = Schema.getSchemaFromPath fullPath model
         let defaultAtPath =
-            match getDefaultForSchema schema with
+            match Schema.getDefaultForSchema schema with
             | Field.Group g -> g
             | Field.Leaf l ->
                 Map.ofList [
@@ -608,7 +519,6 @@ module Form =
         { model with FormFields = fields }
         
     let removeListItem (fullPath: FieldId) (index: int) (model: Model) =
-        
         let path = Path.parse fullPath
         
         let rec setRecursive (pathParts: Path list) (fields: Field) =
