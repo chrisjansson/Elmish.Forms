@@ -9,6 +9,7 @@
     <Compile Include="Types.fs" />
     <Compile Include="Path.fs" />
     <Compile Include="Schema.fs" />
+    <Compile Include="Validator.fs" />
     <Compile Include="Library.fs" />
   </ItemGroup>
 

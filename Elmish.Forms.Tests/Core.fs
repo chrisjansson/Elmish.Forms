@@ -7,11 +7,11 @@ open Expecto
 [<Tests>]
 let tests =
     testList "Core properties" [
-        let textValidator = Validators.text "fieldId"
-        let secondValidator = Validators.text "fieldId2"
+        let textValidator = Validator.Standard.text "fieldId"
+        let secondValidator = Validator.Standard.text "fieldId2"
         
         test "Can add label to schema meta data" {
-            let validator = Validators.withLabel "a label" textValidator
+            let validator = Validator.withLabel "a label" textValidator
             
             let expected = SchemaField.Leaf { Id = "fieldId"; Label = Some "a label"; Type = "string"; IsRequired = false }
             let actual = validator.Schema
@@ -41,8 +41,8 @@ let tests =
         }
         
         test "Initializes single validator from environment" {
-            let textValidator = Validators.text "fieldId"
-            let textValidator = textValidator |> Validators.initFrom (fun _ -> Some "hello")
+            let textValidator = Validator.Standard.text "fieldId"
+            let textValidator = textValidator |> Validator.initFrom (fun _ -> Some "hello")
             
             let model = Form.initWithDefault textValidator None
 
@@ -55,8 +55,8 @@ let tests =
         test "Validates required validator and formats label" {
             let requiredValidator =
                 textValidator
-                |> Validators.isRequired 
-                |> Validators.withLabel "Required field"
+                |> Validator.isRequired 
+                |> Validator.withLabel "Required field"
             
             let model = Form.init requiredValidator
 
@@ -98,7 +98,7 @@ let tests =
         }
         
         test "Validates applicative combination first required" {
-            let textValidator = textValidator |> Validators.isRequired
+            let textValidator = textValidator |> Validator.isRequired
             let combined = Validator.from (fun (s1: string) (s2: string option) -> (s1, s2))
             let combined = Validator.apply combined textValidator
             let combined = Validator.apply combined secondValidator
@@ -112,7 +112,7 @@ let tests =
         }
         
         test "Validates applicative combination second required" {
-            let secondValidator = secondValidator |> Validators.isRequired
+            let secondValidator = secondValidator |> Validator.isRequired
             let combined = Validator.from (fun (s1: string option) (s2: string) -> (s1, s2))
             let combined = Validator.apply combined textValidator
             let combined = Validator.apply combined secondValidator
@@ -126,8 +126,8 @@ let tests =
         }
         
         test "Validates applicative combination both required" {
-            let textValidator = textValidator |> Validators.isRequired
-            let secondValidator = secondValidator |> Validators.isRequired
+            let textValidator = textValidator |> Validator.isRequired
+            let secondValidator = secondValidator |> Validator.isRequired
             let combined = Validator.from (fun (s1: string) (s2: string) -> (s1, s2))
             let combined = Validator.apply combined textValidator
             let combined = Validator.apply combined secondValidator
@@ -141,8 +141,8 @@ let tests =
         }
         
         test "Validates successful applicative combination both required" {
-            let textValidator = textValidator |> Validators.isRequired
-            let secondValidator = secondValidator |> Validators.isRequired
+            let textValidator = textValidator |> Validator.isRequired
+            let secondValidator = secondValidator |> Validator.isRequired
             let combined = Validator.from (fun (s1: string) (s2: string) -> (s1, s2))
             let combined = Validator.apply combined textValidator
             let combined = Validator.apply combined secondValidator
@@ -159,10 +159,10 @@ let tests =
         }
         
         test "Initializes and validates applicative validators" {
-            let textValidator = Validators.text "fieldId"
-            let secondValidator = Validators.text "fieldId2"
-            let textValidator = textValidator |> Validators.isRequired |> Validators.initFrom (fun (x, _) -> x)
-            let secondValidator = secondValidator |> Validators.isRequired |> Validators.initFrom (fun (_, y) -> y)
+            let textValidator = Validator.Standard.text "fieldId"
+            let secondValidator = Validator.Standard.text "fieldId2"
+            let textValidator = textValidator |> Validator.isRequired |> Validator.initFrom (fun (x, _) -> x)
+            let secondValidator = secondValidator |> Validator.isRequired |> Validator.initFrom (fun (_, y) -> y)
             let combined = Validator.from (fun (s1: string) (s2: string) -> (s1, s2))
             let combined = Validator.apply combined textValidator
             let combined = Validator.apply combined secondValidator
@@ -180,7 +180,7 @@ let tests =
         //TODO: predicate validator
         
         testList "Int validator" [
-            let validator = textValidator |> Validators.asInt
+            let validator = textValidator |> Validator.Standard.asInt
 
             test "Has schema" {
                 
@@ -215,7 +215,7 @@ let tests =
                 }
                 
             test "Initializes form with integer" {
-                    let validator = Validators.text "intId" |> Validators.asInt |> Validators.initFrom (fun (i: int) -> Some i)
+                    let validator = Validator.Standard.text "intId" |> Validator.Standard.asInt |> Validator.initFrom (fun (i: int) -> Some i)
                     let model = Form.initWithDefault validator 123
 
                     let actual = Form.validate validator () model.FormFields
@@ -226,7 +226,7 @@ let tests =
         ]
         
         testList "Text validator" [
-            let validator = Validators.text "fieldId"
+            let validator = Validator.Standard.text "fieldId"
 
             test "Has schema" {
                 
@@ -271,8 +271,8 @@ let tests =
         
         testList "Sub validators" [
             let nestedValidator = Validator.fromNamed "nested" (fun (a: string) (b: string) -> (a, b))
-            let nestedValidator = Validator.apply nestedValidator (Validators.text "1" |> Validators.isRequired)
-            let nestedValidator = Validator.apply nestedValidator (Validators.text "2" |> Validators.isRequired)
+            let nestedValidator = Validator.apply nestedValidator (Validator.Standard.text "1" |> Validator.isRequired)
+            let nestedValidator = Validator.apply nestedValidator (Validator.Standard.text "2" |> Validator.isRequired)
             
             let parentValidator = Validator.fromNamed "parent" (fun (a: string * string) (b: string * string) -> (a, b))
             let parentValidator = Validator.apply parentValidator (Validator.withSub "1" nestedValidator)
@@ -316,12 +316,12 @@ let tests =
             
             test "Initializes with hydrate" {
                 let nestedValidator = Validator.from (fun (a: string) (b: string) -> (a, b))
-                let nestedValidator = Validator.apply nestedValidator (Validators.text "1" |> Validators.isRequired |> Validators.initFrom (fun (a, _) -> a))
-                let nestedValidator: Validator<string * string, _, string * string> = Validator.apply nestedValidator (Validators.text "2" |> Validators.isRequired |> Validators.initFrom (fun (_, b) -> b))
+                let nestedValidator = Validator.apply nestedValidator (Validator.Standard.text "1" |> Validator.isRequired |> Validator.initFrom (fun (a, _) -> a))
+                let nestedValidator: Validator<string * string, _, string * string> = Validator.apply nestedValidator (Validator.Standard.text "2" |> Validator.isRequired |> Validator.initFrom (fun (_, b) -> b))
                 
                 let parentValidator = Validator.from (fun (a: string * string) (b: string * string) -> (a, b))
-                let parentValidator = Validator.apply parentValidator (Validator.withSub "1" nestedValidator |> Validators.mapInit (fun (a, _) -> a))
-                let parentValidator = Validator.apply parentValidator (Validator.withSub "2" nestedValidator |> Validators.mapInit (fun (_, b) -> b))
+                let parentValidator = Validator.apply parentValidator (Validator.withSub "1" nestedValidator |> Validator.mapInit (fun (a, _) -> a))
+                let parentValidator = Validator.apply parentValidator (Validator.withSub "2" nestedValidator |> Validator.mapInit (fun (_, b) -> b))
                 
                 let model = Form.initWithDefault parentValidator (("1", "2"), ("3", "4"))
                 
@@ -367,7 +367,7 @@ let tests =
         ]
     
         testList "List of text validator" [
-            let textValidator = Validators.text "id" |> Validators.isRequired
+            let textValidator = Validator.Standard.text "id" |> Validator.isRequired
             
             test "Has correct schema" {
                 let validator = Validator.withList "texts" textValidator
@@ -392,7 +392,7 @@ let tests =
             }
             
             test "Initializes list from data" {
-                let validator = Validator.withList "texts" (textValidator |> Validators.initFrom (fun x -> x)) |> Validators.initFrom (fun x -> x)
+                let validator = Validator.withList "texts" (textValidator |> Validator.initFrom (fun x -> x)) |> Validator.initFrom (fun x -> x)
                 
                 let expected =
                     [
@@ -408,7 +408,7 @@ let tests =
             }
             
             test "Validates list" {
-                let validator = Validator.withList "texts" (textValidator |> Validators.initFrom (fun x -> x)) |> Validators.initFrom (fun x -> x)
+                let validator = Validator.withList "texts" (textValidator |> Validator.initFrom (fun x -> x)) |> Validator.initFrom (fun x -> x)
                 
                 let model = Form.initWithDefault validator [ "hello"; "world" ]
                                     
@@ -420,7 +420,7 @@ let tests =
             }
             
             test "Validates invalid list" {
-                let validator = Validator.withList "texts" (textValidator |> Validators.initFrom (fun x -> x)) |> Validators.initFrom (fun x -> x)
+                let validator = Validator.withList "texts" (textValidator |> Validator.initFrom (fun x -> x)) |> Validator.initFrom (fun x -> x)
                 
                 let model = Form.initWithDefault validator [ "hello"; "" ]
                                     
@@ -432,7 +432,7 @@ let tests =
             }
 
             test "Add list item" {
-                let validator = Validator.withList "texts" (textValidator |> Validators.initFrom (fun x -> x)) |> Validators.initFrom (fun x -> x)
+                let validator = Validator.withList "texts" (textValidator |> Validator.initFrom (fun x -> x)) |> Validator.initFrom (fun x -> x)
                 
                 let model =
                     Form.initWithDefault validator [ ]
@@ -446,7 +446,7 @@ let tests =
             }
 
             test "Remove list item" {
-                let validator = Validator.withList "texts" (textValidator |> Validators.initFrom (fun x -> x)) |> Validators.initFrom (fun x -> x)
+                let validator = Validator.withList "texts" (textValidator |> Validator.initFrom (fun x -> x)) |> Validator.initFrom (fun x -> x)
                 
                 let model =
                     Form.initWithDefault validator [ ]
@@ -461,7 +461,7 @@ let tests =
             }
                         
             test "Validates, set values" {
-                let validator = Validator.withList "texts" (textValidator |> Validators.initFrom (fun x -> x)) |> Validators.initFrom (fun x -> x)
+                let validator = Validator.withList "texts" (textValidator |> Validator.initFrom (fun x -> x)) |> Validator.initFrom (fun x -> x)
                 
                 let model =
                     Form.initWithDefault validator [ ""; "" ]
@@ -477,8 +477,8 @@ let tests =
         ]
         
         testList "List of complex validator" [
-            let textValidator = Validators.text "id" |> Validators.isRequired |> Validators.initFrom (fun (a, _) -> a)
-            let textValidator2 = Validators.text "id2" |> Validators.isRequired |> Validators.initFrom (fun (_, b) -> b)
+            let textValidator = Validator.Standard.text "id" |> Validator.isRequired |> Validator.initFrom (fun (a, _) -> a)
+            let textValidator2 = Validator.Standard.text "id2" |> Validator.isRequired |> Validator.initFrom (fun (_, b) -> b)
             
             let complexValidator =
                 Validator.from (fun a b -> (a, b))
@@ -508,7 +508,7 @@ let tests =
             }
 
             test "Initializes list from data" {
-                let validator = Validator.withList "complex" complexValidator |> Validators.initFrom (fun x -> x)
+                let validator = Validator.withList "complex" complexValidator |> Validator.initFrom (fun x -> x)
                 
                 let expected =
                     [
@@ -523,7 +523,7 @@ let tests =
             }
 
             test "Validates list" {
-                let validator = Validator.withList "complex" complexValidator |> Validators.initFrom (fun x -> x)
+                let validator = Validator.withList "complex" complexValidator |> Validator.initFrom (fun x -> x)
                 
                 let model = Form.initWithDefault validator [ "hello", "world" ]
                                     
@@ -535,7 +535,7 @@ let tests =
             }
             
             test "Validates invalid list" {
-                let validator = Validator.withList "complex" complexValidator |> Validators.initFrom (fun x -> x)
+                let validator = Validator.withList "complex" complexValidator |> Validator.initFrom (fun x -> x)
                 
                 let model = Form.initWithDefault validator [ "hello", "" ]
                                     
@@ -547,7 +547,7 @@ let tests =
             }
             
             test "Add list item" {
-                let validator = Validator.withList "complex" complexValidator |> Validators.initFrom (fun x -> x)
+                let validator = Validator.withList "complex" complexValidator |> Validator.initFrom (fun x -> x)
                 
                 let model =
                     Form.initWithDefault validator [ ]
@@ -564,7 +564,7 @@ let tests =
             }
 
             test "Remove list item" {
-                let validator = Validator.withList "complex" complexValidator |> Validators.initFrom (fun x -> x)
+                let validator = Validator.withList "complex" complexValidator |> Validator.initFrom (fun x -> x)
                 
                 let model =
                     Form.initWithDefault validator [ ]

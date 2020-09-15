@@ -64,8 +64,7 @@ let withType (t: string) (schema: SchemaField) =
     | SchemaField.Group gd -> SchemaField.Group { gd with Type = t }
     | SchemaField.Type td -> SchemaField.Type { td with Type = t }
     | SchemaField.Sub _ -> schema
-    
-    
+        
 let rec getDefaultForSchema (schema: SchemaField) =
     match schema with
     | SchemaField.Leaf l ->
