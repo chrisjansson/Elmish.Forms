@@ -1,6 +1,29 @@
 [<AutoOpen>]
 module Elmish.Forms.Types
 
+//Validation error formatter
+// 'ValidationErrorContext -> string list
+
+//A validation function takes a validation environment, the value and returns a new value
+// 'value_in -> 'env -> Result<'value_out, ValidationErrorFormatter>
+
+//A validator
+//Validator<'Result, 'Env, 'InitializeFrom>
+// {
+//    Validate: FormData -> 'Env -> Result
+//    Schema: A description of the forms structure, includes metadata such as labels, type, requiredness, static default values
+//
+//
+//
+//
+// }
+
+//InitFrom from note, when combining a validator like
+// text "abc" |> initFrom (fun x -> x.A) |> asInt
+// In this case the 'InitFrom expected by asInt would type missmatches
+// The current solution is moving text "abc" |> asInt |> initFrom (fun x -> x.A)
+// In the case of "abc" |> initFrom (fun x -> x) |> asInt |> initFrom (fun x -> x.A) throw an exception from the asInt combinator since the first initFrom will be thrown away silently
+
 //Model types
 [<RequireQualifiedAccess>]
 type Field =
