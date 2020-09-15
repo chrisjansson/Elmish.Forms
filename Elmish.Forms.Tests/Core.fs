@@ -2,7 +2,6 @@ module ElmishForms.Tests.CoreProperties
 
 
 open Elmish.Forms
-open Elmish.Forms.Core
 open Expecto
 
 [<Tests>]
