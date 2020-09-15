@@ -7,6 +7,7 @@
   <ItemGroup>
     <Compile Include="Extensions.fs" />
     <Compile Include="Types.fs" />
+    <Compile Include="Path.fs" />
     <Compile Include="Library.fs" />
   </ItemGroup>
 

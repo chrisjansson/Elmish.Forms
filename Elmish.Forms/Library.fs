@@ -92,26 +92,6 @@ module Validator =
             | SchemaField.Type td -> SchemaField.Type { td with Type = t }
             | SchemaField.Sub _ -> schema
     
-    module Path =
-        let private tryParseListAccess node =
-            let r = Regex("(.+)\[([0-9+])\]")
-            let matches = r.Matches(node)
-            if matches.Count = 0 then
-                None
-            else
-                Some (matches.[0].Groups.[1].Value, int (matches.[0].Groups.[2].Value))
-        
-        let parse (path: FieldId) =
-            let pathParts = path.Split([|'.'|])
-            
-            [
-                for part in pathParts do
-                    match tryParseListAccess part with
-                    | Some (id, index) -> Path.List (id, index)
-                    | None -> Path.Node part
-            ]
-
-    
     let apply (vf: Validator<_, _, _>) (va: Validator<_, _, _>): Validator<_, _, _> =
         let validate formFields (context: Context<_>) =
             let vfc = { Env = context.Env; Schema = vf.Schema }
@@ -558,8 +538,7 @@ module Form =
         }
    
     let setField (id: FieldId) (value: FieldState) (model: Model) =
-
-        let pathParts = Validator.Path.parse id
+        let pathParts = Path.parse id
             
         let rec setRecursive (pathParts: Path list) (fields: Field) =
             match pathParts with
@@ -611,7 +590,7 @@ module Form =
             Some (int (matches.[0].Groups.[1].Value))
         
     let private getSchemaFromPath (path: FieldId) (model: Model) =
-        let path = Validator.Path.parse path
+        let path = Path.parse path
         
         let rec inner (pathParts: Path list) (schema: SchemaField) =
             if pathParts.Length = 0 then
@@ -646,7 +625,7 @@ module Form =
             
     let addListItem (fullPath: FieldId) (model: Model) =
         
-        let path = Validator.Path.parse fullPath
+        let path = Path.parse fullPath
         let schema = getSchemaFromPath fullPath model
         let defaultAtPath =
             match getDefaultForSchema schema with
@@ -696,7 +675,7 @@ module Form =
         
     let removeListItem (fullPath: FieldId) (index: int) (model: Model) =
         
-        let path = Validator.Path.parse fullPath
+        let path = Path.parse fullPath
         
         let rec setRecursive (pathParts: Path list) (fields: Field) =
             match pathParts with
