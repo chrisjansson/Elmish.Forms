@@ -26,72 +26,6 @@ module Validator =
             Serialize = fun _ _ _ -> Field.Group (Map.empty)
         }
     
-    module Schema =
-        let getId (schema: SchemaField) =
-            match schema with
-            | SchemaField.Leaf ld -> ld.Id
-            | SchemaField.Group _ -> failwith "Group has no id"
-            | SchemaField.Type _ -> failwith "Type has no id"
-            | SchemaField.Sub sd -> sd.Id
-            | SchemaField.List ld -> ld.Id
-            
-        let rec getLabel (schema: SchemaField) =
-            match schema with
-            | SchemaField.Leaf ld -> ld.Label
-            | SchemaField.Group gd -> gd.Label
-            | SchemaField.Type td -> td.Label
-            | SchemaField.Sub sd -> getLabel sd.SubSchema
-            | SchemaField.List ld -> getLabel ld.SubSchema
-            
-        let rec withLabel (label: string) (schema: SchemaField) =
-            match schema with
-            | SchemaField.Leaf ld ->
-                SchemaField.Leaf
-                    {
-                        ld with Label = Some label
-                    }
-            | SchemaField.Group gd ->
-                SchemaField.Group
-                    {
-                        gd with Label = Some label
-                    }
-                    
-            | SchemaField.Type td ->
-                SchemaField.Type
-                    {
-                        td with Label = Some label
-                    }
-            | SchemaField.Sub sd ->
-                SchemaField.Sub
-                    {
-                        sd with SubSchema = withLabel label sd.SubSchema
-                    }
-                    
-        let withIsRequired (isRequired: bool) (schema: SchemaField) =
-            match schema with
-            | SchemaField.Leaf ld ->
-                SchemaField.Leaf
-                    {
-                        ld with IsRequired = isRequired
-                    }
-            | SchemaField.Group _ -> schema
-            | SchemaField.Type _ -> schema
-            | SchemaField.Sub _ -> schema
-            
-        let rec getType (schema: SchemaField) =
-            match schema with
-            | SchemaField.Leaf ld -> ld.Type
-            | SchemaField.Group gd -> gd.Type
-            | SchemaField.Type td -> td.Type
-            | SchemaField.Sub td -> sprintf "Sub with %s" (getType td.SubSchema)
-            
-        let withType (t: string) (schema: SchemaField) =
-            match schema with
-            | SchemaField.Leaf ld -> SchemaField.Leaf { ld with Type = t }
-            | SchemaField.Group gd -> SchemaField.Group { gd with Type = t }
-            | SchemaField.Type td -> SchemaField.Type { td with Type = t }
-            | SchemaField.Sub _ -> schema
-    
     let apply (vf: Validator<_, _, _>) (va: Validator<_, _, _>): Validator<_, _, _> =
         let validate formFields (context: Context<_>) =
             let vfc = { Env = context.Env; Schema = vf.Schema }
@@ -528,7 +462,7 @@ module Form =
             match getDefaultForSchema validator.Schema with
             | Field.Group g -> g
             | Field.Leaf l ->
-                let id = Validator.Schema.getId validator.Schema
+                let id = Schema.getId validator.Schema
                 Map.ofList [ id, Field.Leaf l ]
             | _ -> failwith "Expects group when default initializing"
         
@@ -632,7 +566,7 @@ module Form =
             | Field.Group g -> g
             | Field.Leaf l ->
                 Map.ofList [
-                    Validator.Schema.getId schema, Field.Leaf l
+                    Schema.getId schema, Field.Leaf l
                 ]
             | x -> failwithf "expected group from default %A" x
         
