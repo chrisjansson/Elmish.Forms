@@ -472,7 +472,7 @@ let tests =
                                     
                 let result = Form.validate validator () model.FormFields
                 
-                let expected = Error [("texts[1].texts", ["texts is required"])]
+                let expected = Error [("texts[1].id", ["id is required"])]
                 
                 Expect.equal result expected "Validated result"
             }
@@ -486,7 +486,7 @@ let tests =
                                     
                 let result = Form.validate validator () model.FormFields
                 
-                let expected = Error [("texts[0].texts", ["texts is required"])]
+                let expected = Error [("texts[0].id", ["id is required"])]
                 
                 Expect.equal result expected "Validated result"
             }

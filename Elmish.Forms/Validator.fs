@@ -189,6 +189,14 @@ let withList (listId: FieldId) (validator: Validator<'a, _, _>): Validator<'a li
                 | Field.List l -> l
                 | _ -> failwith "Invalid field for validation"
 
+            let schema =
+                match context.Schema with
+                | SchemaField.List l -> l.SubSchema
+                | _ -> failwith "expected list schema"
+            
+            let context =
+                { context with Schema = schema }
+            
             let runValidationForIndex index fields =
                 match validator.Validate fields context with
                 | Ok r -> Ok r
