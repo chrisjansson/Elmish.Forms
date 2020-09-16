@@ -158,6 +158,26 @@ let tests =
             Expect.equal actual expected "Validation result"
         }
         
+        
+        test "Applicative bind fail" {
+            let textValidator = textValidator |> Validator.isRequired |> Validator.withLabel "hej"
+            let secondValidator = secondValidator |> Validator.isRequired
+            let combined = Validator.from (fun (s1: string) (s2: string) -> (s1, s2))
+            let combined = Validator.apply combined textValidator
+            let combined = Validator.apply combined secondValidator
+            let combined = Validator.bind  (fun v c -> Error [ "", [ "an error on the group" ] ]) id combined
+            
+            let model =
+                Form.init combined
+                |> Form.setField "fieldId" (FieldState.String "hej")
+                |> Form.setField "fieldId2" (FieldState.String "hej")
+
+            let actual = Form.validate combined () model.FormFields
+            let expected = Error [ "", [ "an error on the group" ] ]
+
+            Expect.equal actual expected "Validation result"
+        }
+        
         test "Initializes and validates applicative validators" {
             let textValidator = Validator.Standard.text "fieldId"
             let secondValidator = Validator.Standard.text "fieldId2"
@@ -267,6 +287,32 @@ let tests =
 
                     Expect.equal actual expected "Validation result"       
                 }
+                
+            test "Validates successfully with bind" {
+                let validator =
+                    validator
+                    |> Validator.bind (fun s _ -> Ok s) id
+                
+                let actual =
+                    Form.init validator
+                    |> Form.setField "fieldId" (FieldState.String "Hej")
+                    |> (fun x -> Form.validate validator () x.FormFields)
+                
+                Expect.equal (Ok (Some "Hej")) actual "result"
+            }
+            
+            test "Fails validation with error from bind" {
+                let validator =
+                    validator
+                    |> Validator.bind (fun s context -> Error [ Schema.getId context.Schema, [ "an error" ] ]) id
+                
+                let actual =
+                    Form.init validator
+                    |> Form.setField "fieldId" (FieldState.String "Hej")
+                    |> (fun x -> Form.validate validator () x.FormFields)
+                
+                Expect.equal (Error [ "fieldId", [ "an error" ] ]) actual "result"
+            }
         ]
         
         testList "Sub validators" [

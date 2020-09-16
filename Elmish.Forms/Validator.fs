@@ -10,6 +10,39 @@ let from (f: 'T): Validator<'T, 'Env, 'InitFrom> =
         Serialize = fun _ _ _ -> Field.Group (Map.empty)
     }
     
+let bind
+    (validate: 'In -> Context<'Env> -> ValidationResult<'Result>)
+    (serialize: 'Result -> 'In)
+    (validator: Validator<'In, 'Env, 'InitFrom>): Validator<'Result, 'Env, 'InitFrom> =
+    let validate formFields (context: Context<'Env>) =
+        match validator.Validate formFields context with
+        | Ok r -> validate r context
+        | Error e -> Error e
+    { 
+        Validate = validate
+        Schema = validator.Schema
+        InitFrom = None
+        Serialize =
+            fun env initSelector (value: _ option) ->
+                let valueToSerialize =
+                    match initSelector with
+                    | Some initSelector ->
+                        match initSelector env with
+                        | Some value -> Some value
+                        | None -> None
+                    | None ->
+                        match value with
+                        | Some value -> Some value
+                        | None -> None
+                
+                let serializedValue =  
+                    match valueToSerialize with
+                    | Some v -> Some (serialize v)
+                    | None -> None
+                    
+                validator.Serialize env None serializedValue
+    }
+    
 let fromNamed (name: string) (f: 'T): Validator<'T, 'Env, 'InitFrom> =
     let validate _ (_: Context<'Env>) =
         Ok f
