@@ -50,6 +50,7 @@ and LeafMetaData =
         Label: string option
         Type: string
         IsRequired: bool
+        Default: string option
     }
 and GroupMetaData =
     {

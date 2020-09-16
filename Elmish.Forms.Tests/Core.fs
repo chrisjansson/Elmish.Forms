@@ -13,7 +13,7 @@ let tests =
         test "Can add label to schema meta data" {
             let validator = Validator.withLabel "a label" textValidator
             
-            let expected = SchemaField.Leaf { Id = "fieldId"; Label = Some "a label"; Type = "string"; IsRequired = false }
+            let expected = SchemaField.Leaf { Id = "fieldId"; Label = Some "a label"; Type = "string"; IsRequired = false; Default = None }
             let actual = validator.Schema
             
             Expect.equal actual expected "Validator schema with label"
@@ -204,7 +204,7 @@ let tests =
 
             test "Has schema" {
                 
-                let expected = SchemaField.Leaf { Id = "fieldId"; Label = None; Type = "int"; IsRequired = false }
+                let expected = SchemaField.Leaf { Id = "fieldId"; Label = None; Type = "int"; IsRequired = false; Default = None }
                 let actual = validator.Schema
                 
                 Expect.equal actual expected "Validator schema"
@@ -250,7 +250,7 @@ let tests =
 
             test "Has schema" {
                 
-                let expected = SchemaField.Leaf { Id = "fieldId"; Label = None; Type = "string"; IsRequired = false }
+                let expected = SchemaField.Leaf { Id = "fieldId"; Label = None; Type = "string"; IsRequired = false; Default = None }
                 let actual = validator.Schema
                 
                 Expect.equal actual expected "Validator schema"
@@ -622,6 +622,51 @@ let tests =
                 let expected = Ok []
                 
                 Expect.equal result expected "Validated result"
+            }
+        ]
+        
+        testList "Choose" [
+            let option1 = Validator.Standard.text "opt1"
+            let option2 = Validator.Standard.text "opt2"
+            
+            let validator = Validator.choose "1" id [
+                "1", option1
+                "2", option2
+            ]            
+            
+            test "Default initializes" {
+                let model = Form.init validator
+                
+                let expected =
+                    Map.ofList [
+                        "discriminator", Field.Leaf (FieldState.String "1")
+                        "1", Field.Group (Map.ofList [ "opt1", Field.Leaf (FieldState.String "") ])
+                        "2", Field.Group (Map.ofList [ "opt2", Field.Leaf (FieldState.String "") ])
+                    ]
+                    
+                Expect.equal model.FormFields expected "Default value of choose"
+            }
+            
+            test "Initializes select" {
+                let option1 = Validator.Standard.text "opt1" |> Validator.initFrom id
+                let option2 = Validator.Standard.text "opt2" |> Validator.initFrom id
+                
+                let validator =
+                    Validator.choose "1" id [
+                        "1", option1
+                        "2", option2
+                    ] |> Validator.initFrom id
+                
+                let model = Form.initWithDefault validator ("2", Some "henlo")
+                
+                let expected =
+                    Map.ofList [
+                        "discriminator", Field.Leaf (FieldState.String "2")
+                        "1", Field.Group (Map.ofList [ "opt1", Field.Leaf (FieldState.String "") ])
+                        "2", Field.Group (Map.ofList [ "opt2", Field.Leaf (FieldState.String "henlo") ])
+                    ]
+                    
+                Expect.equal model.FormFields expected "Default value of choose"
             }
         ]
     

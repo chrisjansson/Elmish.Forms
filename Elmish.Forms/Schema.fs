@@ -68,7 +68,11 @@ let withType (t: string) (schema: SchemaField) =
 let rec getDefaultForSchema (schema: SchemaField) =
     match schema with
     | SchemaField.Leaf l ->
-        Field.Leaf (FieldState.String "")
+        let defaultValue =
+            l.Default
+            |> Option.defaultValue ""
+        
+        Field.Leaf (FieldState.String defaultValue)
     | SchemaField.Type t ->
          t.Fields
          |> Map.toList

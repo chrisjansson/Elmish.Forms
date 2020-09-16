@@ -220,6 +220,74 @@ let withLabel (label: string) (validator: Validator<_, _, _>) =
     let schema = validator.Schema |> Schema.withLabel label
     { validator with Schema = schema }
 
+let choose (defaultValue: 'TSelect) (encode: 'TSelect -> string) (mapping: ('TSelect * Validator<_, _, 'InitFrom>) list): Validator<_, _, 'TSelect * 'InitFrom> =
+    let nestSubSchema (schema: SchemaField) =
+        match schema with
+        | SchemaField.Leaf l ->
+            {
+                GroupMetaData.Fields = Map.ofList [
+                    l.Id, SchemaField.Leaf l 
+                ]
+                Label = None
+                Type = ""
+            } |> SchemaField.Group
+        | _ -> schema
+    
+    let schema =
+
+        
+        
+        SchemaField.Group
+            {
+                Type = "choose"
+                Label = None
+                Fields = Map.ofList [
+                    "discriminator", SchemaField.Leaf { Id = "discriminator"; Label = None; Type = "choose discriminator"; IsRequired = true; Default = defaultValue |> encode |> Some }
+                    yield! mapping |> List.map (fun (key, validator) -> (encode key), nestSubSchema validator.Schema)
+                ]
+            }
+    
+    let serialize initFrom initSelector _ =
+        let initValue = 
+            match initSelector with
+            | Some initSelector ->
+                match initSelector initFrom with
+                | Some v -> Some v
+                | None -> None
+            | None -> None
+    
+        match initValue with
+        | Some (discriminator, chooseValue) ->
+            let _, validator =
+                mapping
+                |> List.find (fun (x, _) -> x = discriminator) 
+            
+            let restValidators = 
+                mapping
+                |> List.filter (fun (x, _) -> x <> discriminator)
+                |> List.map (fun (disc, v) -> (encode disc, v.Schema |> nestSubSchema |> Schema.getDefaultForSchema))
+                
+            Map.ofList [
+                "discriminator", Field.Leaf (FieldState.String (encode discriminator))
+                encode discriminator, Field.Group (
+                    match validator.Serialize chooseValue validator.InitFrom None with
+                    | Field.Group g -> g
+                    | Field.Leaf l -> Map.ofList [ Schema.getId validator.Schema, Field.Leaf l ]
+                    | _ -> failwith "Not supported"
+                    )
+                yield! restValidators
+            ] |>
+            Field.Group 
+        | None -> failwith "Must be able to hydrate"            
+    
+    {
+        Schema = schema
+        Validate = fun _ _ -> failwith "Meh"
+        InitFrom = None
+        Serialize = serialize
+    }
+    
+
 let isRequired (validator: Validator<'a option, _, _>): Validator<'a, _, _> =
     let schema = validator.Schema |> Schema.withIsRequired true
                 
@@ -323,7 +391,7 @@ module Standard =
 
         {
             Validate = validate
-            Schema = SchemaField.Leaf { Id = id; Label = None; Type = "string"; IsRequired = false }
+            Schema = SchemaField.Leaf { Id = id; Label = None; Type = "string"; IsRequired = false; Default = None }
             InitFrom = None
             Serialize = serialize
         }
