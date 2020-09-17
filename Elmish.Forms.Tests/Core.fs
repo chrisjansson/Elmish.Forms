@@ -668,6 +668,70 @@ let tests =
                     
                 Expect.equal model.FormFields expected "Default value of choose"
             }
+        
+            test "Validates second option of choose" {
+                let option1 = Validator.Standard.text "opt1" |> Validator.initFrom id
+                let option2 = Validator.Standard.text "opt2" |> Validator.initFrom id
+                
+                let validator =
+                    Validator.choose "1" id [
+                        "1", option1
+                        "2", option2
+                    ] |> Validator.initFrom id
+                
+                
+                let actual =
+                    Form.initWithDefault validator ("2", Some "henlo")
+                    |> (fun x -> Form.validate validator () x.FormFields) 
+
+                let expected = Ok ("2", Some "henlo")
+                                    
+                Expect.equal actual expected "Validated value"
+            }
+            
+            test "Selects option 2, sets value then validates" {
+                let option1 = Validator.Standard.text "opt1" |> Validator.initFrom id
+                let option2 = Validator.Standard.text "opt2" |> Validator.initFrom id
+                
+                let validator =
+                    Validator.choose "1" id [
+                        "1", option1
+                        "2", option2
+                    ] |> Validator.initFrom id
+                
+                
+                let actual =
+                    Form.init validator
+                    |> Form.setField "discriminator" (FieldState.String "2")
+                    |> Form.setField "1.opt1" (FieldState.String "option 1")
+                    |> Form.setField "2.opt2" (FieldState.String "option 2")
+                    |> (fun x -> Form.validate validator () x.FormFields) 
+
+                let expected = Ok ("2", Some "option 2")
+                                    
+                Expect.equal actual expected "Validated value"
+            }
+            
+            test "Selecting required option without entering the field is invalid" {
+                let option1 = Validator.Standard.text "opt1" |> Validator.isRequired |> Validator.initFrom id
+                let option2 = Validator.Standard.text "opt2" |> Validator.isRequired |> Validator.initFrom id
+                
+                let validator =
+                    Validator.choose "1" id [
+                        "1", option1
+                        "2", option2
+                    ] |> Validator.initFrom id
+                
+                let actual =
+                    Form.init validator
+                    |> Form.setField "discriminator" (FieldState.String "2")
+                    |> Form.setField "1.opt1" (FieldState.String "option 1")
+                    |> (fun x -> Form.validate validator () x.FormFields) 
+
+                let expected = Error [ "1.opt2", [ "1.opt2 is required" ] ]
+                                    
+                Expect.equal actual expected "Validated value"
+            }
         ]
     
     ]
