@@ -728,7 +728,7 @@ let tests =
                     |> Form.setField "1.opt1" (FieldState.String "option 1")
                     |> (fun x -> Form.validate validator () x.FormFields) 
 
-                let expected = Error [ "1.opt2", [ "1.opt2 is required" ] ]
+                let expected = Error [ "2.opt2", [ "opt2 is required" ] ]
                                     
                 Expect.equal actual expected "Validated value"
             }

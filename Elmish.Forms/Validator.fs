@@ -221,6 +221,11 @@ let withLabel (label: string) (validator: Validator<_, _, _>) =
     { validator with Schema = schema }
 
 let choose (defaultValue: 'TSelect) (encode: 'TSelect -> string) (mapping: ('TSelect * Validator<_, _, 'InitFrom>) list): Validator<_, _, 'TSelect * 'InitFrom> =
+    let mapping =
+        mapping
+        |> List.map (fun (d, v) -> encode d, (d, v))
+        |> Map.ofList
+    
     let nestSubSchema (schema: SchemaField) =
         match schema with
         | SchemaField.Leaf l ->
@@ -240,18 +245,16 @@ let choose (defaultValue: 'TSelect) (encode: 'TSelect -> string) (mapping: ('TSe
                 Label = None
                 Fields = Map.ofList [
                     "discriminator", SchemaField.Leaf { Id = "discriminator"; Label = None; Type = "choose discriminator"; IsRequired = true; Default = defaultValue |> encode |> Some }
-                    yield! mapping |> List.map (fun (key, validator) -> (encode key), nestSubSchema validator.Schema)
+                    yield! mapping |> Map.toList |> List.map (fun (_, (key, validator)) -> (encode key), nestSubSchema validator.Schema)
                 ]
             }
          
     let decode (discriminator: string) =
         mapping
-        |> List.find (fun (d, _) -> encode d = discriminator)
+        |> Map.find discriminator
         |> fst
            
-    let getValidatorForDiscriminator (s: string) =
-        mapping
-        |> List.find (fun (x, _) -> encode x = s) 
+    let getValidatorForDiscriminator (s: string) = Map.find s mapping
             
     let validate formFields context =
         let discriminator =
@@ -266,7 +269,10 @@ let choose (defaultValue: 'TSelect) (encode: 'TSelect -> string) (mapping: ('TSe
             let context = { context with Context.Schema = validator.Schema }
             match validator.Validate g context with
             | Ok r -> Ok (decode discriminator, r)
-            | Error e -> Error e
+            | Error e ->
+                e
+                |> List.map (fun (x, e) -> discriminator + "." + x, e)
+                |> Error
         | _ -> failwith "expected group"
     
     let serialize initFrom initSelector _ =
@@ -285,6 +291,8 @@ let choose (defaultValue: 'TSelect) (encode: 'TSelect -> string) (mapping: ('TSe
             
             let restValidators = 
                 mapping
+                |> Map.toList
+                |> List.map snd
                 |> List.filter (fun (x, _) -> (encode x) <> discriminator)
                 |> List.map (fun (disc, v) -> (encode disc, v.Schema |> nestSubSchema |> Schema.getDefaultForSchema))
                 
@@ -317,7 +325,6 @@ let isRequired (validator: Validator<'a option, _, _>): Validator<'a, _, _> =
             match validator.Validate formFields env with
             | Ok (Some r) -> Ok r
             | Ok None ->
-                printfn "%A" env.Schema
                 let schemaId = Schema.getId env.Schema
                 let label =
                     Schema.getLabel env.Schema
