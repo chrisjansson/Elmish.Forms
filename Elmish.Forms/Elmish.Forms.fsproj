@@ -13,4 +13,8 @@
     <Compile Include="Library.fs" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Include="*.fsproj; **\*.fs" PackagePath="fable\" />
+  </ItemGroup>
+
 </Project>

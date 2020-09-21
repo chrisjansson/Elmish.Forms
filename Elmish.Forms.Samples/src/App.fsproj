@@ -3,17 +3,14 @@
     <TargetFramework>netstandard2.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="../../Elmish.Forms/Extensions.fs" />
-    <Compile Include="../../Elmish.Forms/Types.fs" />
-    <Compile Include="../../Elmish.Forms/Path.fs" />
-    <Compile Include="../../Elmish.Forms/Schema.fs" />
-    <Compile Include="../../Elmish.Forms/Validator.fs" />
-    <Compile Include="../../Elmish.Forms/Library.fs" />
     <Compile Include="App.fs" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Fable.Browser.Dom" Version="2.1.0" />
     <PackageReference Include="Fable.Core" Version="3.1.4" />
     <PackageReference Include="Feliz" Version="1.14.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\Elmish.Forms\Elmish.Forms.fsproj" />
   </ItemGroup>
 </Project>

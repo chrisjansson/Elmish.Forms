@@ -3,6 +3,12 @@ module App
 open Browser.Dom
 open Fable.Core.JsInterop
 
+type SampleModel =
+    {
+        FormModel: Elmish.Forms.Types.Model
+        Submitted: string option
+    }
+
 module SimpleSample =
     open Elmish.Forms
     
@@ -12,13 +18,7 @@ module SimpleSample =
         
     open Feliz
     
-    type SampleFormModel =
-        {
-            FormModel: Model
-            Submitted: string option
-        }
-        
-    let model: SampleFormModel =
+    let model: SampleModel =
         {
             FormModel = Form.init validator
             Submitted = None
@@ -66,7 +66,11 @@ module SimpleSample =
                         Html.div [
                             Html.input [
                                 prop.id "firstName"
-                                prop.onInput (fun e -> updateField "firstName" e.currentTarget?value)
+                                prop.value (getValue "firstName")
+                                prop.onChange (
+                                                  fun (e: Browser.Types.Event) ->
+                                                      updateField "firstName" e.currentTarget?value
+                                              )
                                 prop.placeholder label
                             ]
 
