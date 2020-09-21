@@ -23,6 +23,8 @@ module SimpleSample =
             FormModel = Form.init validator
             Submitted = None
         }
+        
+    let a: string = importDefault "!!raw-loader!./App.fs" //import css from '!!raw-loader!./file.txt'; // Adding `!!` to a request will disable all loaders specified in the configuration
     
     let form =
         React.functionComponent(fun () ->
@@ -82,8 +84,8 @@ module SimpleSample =
                         ]
                         
                         if Option.isSome model.Submitted then
-                            Html.code [
-                                prop.text model.Submitted.Value
+                            Html.pre [
+                                prop.text a
                             ]
                     ]
 
