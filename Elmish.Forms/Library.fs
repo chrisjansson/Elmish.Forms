@@ -82,7 +82,45 @@ module Form =
                     
         let (Field.Group newFormFields) = setRecursive pathParts (Field.Group model.FormFields)
         { model with FormFields = newFormFields }
+
+    let getField (id: FieldId) (model: Model) =
+        let pathParts = Path.parse id
             
+        let rec getRecursive (pathParts: Path list) (fields: Field) =
+            match pathParts with
+            | [] -> failwithf "Invalid path %s" id
+            | [ Path.Node id ] ->
+                match fields with
+                | Field.Group g ->
+                    g
+                    |> Map.find id
+                | _ -> failwithf "Invalid path %s" id
+            | (Path.Node head)::tail ->
+                match fields with
+                | Field.Group g ->
+                    g
+                    |> Map.find head
+                    |> getRecursive tail
+                | _ -> failwithf "Invalid path %s, %A" id fields
+            | (Path.List (head, index))::tail ->
+                let getInList (field: Field) =
+                    match field with
+                    | Field.List l ->
+                        l.[index]
+                        |> Field.Group
+                        |> getRecursive tail
+                    | _ -> failwithf "Invalid path %s, %A" id fields
+                match fields with
+                | Field.Group g ->
+                    g
+                    |> Map.find head
+                    |> getInList
+                | _ -> failwithf "Invalid path %s, %A" id fields
+                    
+        match getRecursive pathParts (Field.Group model.FormFields) with
+        | Field.Leaf l -> l
+        | _ -> failwith "Path did not end at a leaf node"
+    
     let addListItem (fullPath: FieldId) (model: Model) =
         let path = Path.parse fullPath
         let schema = Schema.getSchemaFromPath fullPath model

@@ -1,6 +1,6 @@
 module Elmish.Forms.Validator
 
-let from (f: 'T): Validator<'T, 'Env, 'InitFrom> =
+let inline from (f: 'T): Validator<'T, 'Env, 'InitFrom> =
     let validate _ (_: Context<'Env>) =
         Ok f
     {
