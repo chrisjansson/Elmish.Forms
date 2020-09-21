@@ -7,6 +7,8 @@ Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Elmish.Forms", "Elmish.Form
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "ElmishForms.Tests", "Elmish.Forms.Tests\ElmishForms.Tests.fsproj", "{4CA8FF72-6BEE-48B4-8F68-8CF719264178}"
 EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "App", "Elmish.Forms.Samples\src\App.fsproj", "{C2680C77-3CF8-43C3-A88B-A1CD056C8ADD}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -44,5 +46,17 @@ Global
 		{4CA8FF72-6BEE-48B4-8F68-8CF719264178}.Release|x64.Build.0 = Release|Any CPU
 		{4CA8FF72-6BEE-48B4-8F68-8CF719264178}.Release|x86.ActiveCfg = Release|Any CPU
 		{4CA8FF72-6BEE-48B4-8F68-8CF719264178}.Release|x86.Build.0 = Release|Any CPU
+		{C2680C77-3CF8-43C3-A88B-A1CD056C8ADD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C2680C77-3CF8-43C3-A88B-A1CD056C8ADD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C2680C77-3CF8-43C3-A88B-A1CD056C8ADD}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{C2680C77-3CF8-43C3-A88B-A1CD056C8ADD}.Debug|x64.Build.0 = Debug|Any CPU
+		{C2680C77-3CF8-43C3-A88B-A1CD056C8ADD}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{C2680C77-3CF8-43C3-A88B-A1CD056C8ADD}.Debug|x86.Build.0 = Debug|Any CPU
+		{C2680C77-3CF8-43C3-A88B-A1CD056C8ADD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C2680C77-3CF8-43C3-A88B-A1CD056C8ADD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C2680C77-3CF8-43C3-A88B-A1CD056C8ADD}.Release|x64.ActiveCfg = Release|Any CPU
+		{C2680C77-3CF8-43C3-A88B-A1CD056C8ADD}.Release|x64.Build.0 = Release|Any CPU
+		{C2680C77-3CF8-43C3-A88B-A1CD056C8ADD}.Release|x86.ActiveCfg = Release|Any CPU
+		{C2680C77-3CF8-43C3-A88B-A1CD056C8ADD}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
