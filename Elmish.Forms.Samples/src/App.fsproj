@@ -3,7 +3,9 @@
     <TargetFramework>netstandard2.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="SimpleSample.fs" />
+    <Compile Include="Elmish.Forms.React.fs" />
+    <Compile Include="Utils.fs" />
+    <Compile Include="Samples\SimpleSample.fs" />
     <Compile Include="App.fs" />
   </ItemGroup>
   <ItemGroup>

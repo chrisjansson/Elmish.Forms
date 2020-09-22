@@ -22,7 +22,6 @@ module SimpleSample =
             Submitted = None
         }
         
-    let a: string = importDefault "!!raw-loader!./App.fs" //import css from '!!raw-loader!./file.txt'; // Adding `!!` to a request will disable all loaders specified in the configuration
     
     let form =
         React.functionComponent(fun () ->
@@ -34,7 +33,7 @@ module SimpleSample =
             let render =
                 React.functionComponent (
                     fun () ->
-                        let form = App.SimpleSample.useForm()
+                        let form = Elmish.Forms.React.useForm()
                         Html.form [
                             prop.onSubmit form.FormSubmit
                             prop.children [
@@ -49,7 +48,7 @@ module SimpleSample =
                         ]
                     )
             
-            App.SimpleSample.form { Validator = App.SimpleSample.validator; Render = render; OnSubmit = onSubmit }
+            Elmish.Forms.React.form { Validator = App.SimpleSample.validator; Render = render; OnSubmit = onSubmit }
             
             
         )
