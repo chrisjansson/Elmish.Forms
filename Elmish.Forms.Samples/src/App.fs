@@ -5,7 +5,6 @@ open Fable.Core.JsInterop
 
 type SampleModel =
     {
-        FormModel: Elmish.Forms.Types.Model
         Submitted: string option
     }
 
@@ -20,7 +19,6 @@ module SimpleSample =
     
     let model: SampleModel =
         {
-            FormModel = Form.init validator
             Submitted = None
         }
         
@@ -30,67 +28,30 @@ module SimpleSample =
         React.functionComponent(fun () ->
             let model, setModel = React.useState(model)
             
-            let updateField (id: FieldId) (value: string) =
-                let formModel = Form.setField id (FieldState.String value) model.FormModel
-                setModel({ model with FormModel = formModel })
-            
-            let getValue (id: FieldId) =
-                match Form.getField id model.FormModel with
-                | FieldState.String s -> s
-                | _ -> failwith "Unknown field state type"
-                
-            let getLabel (id: FieldId) =
-                Schema.getSchemaFromPath id model.FormModel
-                |> Schema.getLabel
-                |> Option.defaultValue ""
-            
-            Html.div [
-                Html.form [
-                    prop.onSubmit (
-                                    fun e ->
-                                        e.preventDefault()
-                                        
-                                        let value =
-                                            Form.validate validator () model.FormModel.FormFields
-                                        
-                                        setModel({ model with Submitted = Some (Fable.Core.JS.JSON.stringify(value)) })
-                                  )
-                    prop.children [
-                        let label = getLabel "firstName"
+            let onSubmit result =
+                setModel({ model with Submitted = Some (Fable.Core.JS.JSON.stringify(result)) })
 
-                        Html.div [
-                            
-                            Html.label [
-                                prop.text label
-                                prop.htmlFor "firstName"
-                            ] 
-                        ]
-                        Html.div [
-                            Html.input [
-                                prop.id "firstName"
-                                prop.value (getValue "firstName")
-                                prop.onChange (
-                                                  fun (e: Browser.Types.Event) ->
-                                                      updateField "firstName" e.currentTarget?value
-                                              )
-                                prop.placeholder label
+            let render =
+                React.functionComponent (
+                    fun () ->
+                        let form = App.SimpleSample.useForm()
+                        Html.form [
+                            prop.onSubmit form.FormSubmit
+                            prop.children [
+                                App.SimpleSample.render ()
+                                
+                                Html.div [ Html.button [ prop.type' "submit"; prop.text "Submit" ] ]
+                                
+                                if Option.isSome model.Submitted then
+                                    Html.pre [ prop.text model.Submitted.Value ]
                             ]
 
                         ]
-                        
-                        Html.div [
-                            Html.input [ prop.type' "submit" ]
-                            
-                        ]
-                        
-                        if Option.isSome model.Submitted then
-                            Html.pre [
-                                prop.text a
-                            ]
-                    ]
-
-                ]
-            ]
+                    )
+            
+            App.SimpleSample.form { Validator = App.SimpleSample.validator; Render = render; OnSubmit = onSubmit }
+            
+            
         )
         
 
