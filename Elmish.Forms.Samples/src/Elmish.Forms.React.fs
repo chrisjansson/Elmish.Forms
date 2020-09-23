@@ -10,6 +10,8 @@ type FormContext =
         GetLabel: FieldId -> string
         GetValue: FieldId -> string
         SetField: FieldId -> string -> unit
+        TouchField: FieldId -> unit
+        GetIsTouched: FieldId -> bool
         FormSubmit: Browser.Types.Event -> unit
         GetErrors: FieldId -> (string list) option
     }
@@ -21,6 +23,8 @@ type Field =
         Label: string
         IsRequired: bool
         ErrorMessage: (string list) option
+        TouchField: Browser.Types.FocusEvent -> unit
+        IsTouched: bool
     }
 
 type ElmishFormData<'a, 'b, 'c> = { Validator: Validator<'a, 'b, 'c> }
@@ -45,6 +49,8 @@ let useField (id: FieldId) =
         Label = form.GetLabel id
         IsRequired = form.GetIsRequired id
         ErrorMessage = form.GetErrors id
+        TouchField = fun _ -> form.TouchField id
+        IsTouched = form.GetIsTouched id
     }
 
 type FormProps<'Result, 'b, 'c> =
@@ -58,10 +64,20 @@ type FormState =
     {
         Model: Model
         Errors: Map<FieldId, string list>
+        Touched: Set<FieldId>
     }
 
 type FormComponent<'Result, 'c>(props) as x=
     inherit Fable.React.Component<FormProps<'Result, unit, 'c>, FormState>(props)
+    
+    let updateValidation (model: FormState) validator =
+        let result = Form.validate props.Validator () model.Model.FormFields
+        let errors =
+            match result with
+            | Ok _ -> Map.empty
+            | Error errors -> Map.ofList errors
+        
+        { model with Errors = errors }, result
     
     do
         x.setInitState(Unchecked.defaultof<_>)
@@ -69,14 +85,19 @@ type FormComponent<'Result, 'c>(props) as x=
     override x.componentDidMount() =
         x.setState(
             fun _ props ->
-                { Model = Form.init props.Validator; Errors = Map.empty }
+                { Model = Form.init props.Validator; Errors = Map.empty; Touched = Set.empty }
             )
         
     override x.render() =
         let model = x.state
         
         let updateField (id: FieldId) (value: string) =
-            x.setState(fun model _ -> { model with Model = Form.setField id (FieldState.String value) model.Model })
+            x.setState(
+                fun model props ->
+                    let newFormModel = Form.setField id (FieldState.String value) model.Model
+                    let model, _ = updateValidation { model with Model = newFormModel } props.Validator
+                    model
+                )
 
         let getValue (id: FieldId) =
             match Form.getField id model.Model with
@@ -90,27 +111,29 @@ type FormComponent<'Result, 'c>(props) as x=
         let formSubmit (e: Browser.Types.Event) =
             e.preventDefault ()
             x.setState(
-                fun model _ ->
-                         
-                let result =
-                    Form.validate props.Validator () model.Model.FormFields
-
-                let errors =
-                    match result with
-                    | Ok _ -> Map.empty
-                    | Error errors -> Map.ofList errors
-            
+                fun model props ->
+                
+                let model, result = updateValidation model props.Validator
+                
                 props.OnSubmit result
-                { model with Errors = errors }
+                model
             )
             
-
         let getIsRequired (id: FieldId) =
             Schema.getSchemaFromPath id model.Model
             |> Schema.getIsRequired
             
         let getErrorsMaybe (id: FieldId) =
             Map.tryFind id model.Errors
+            
+        let touchField (id: FieldId) = //TODO: Validate schema inclusion
+            x.setState(
+                fun model _ ->
+                    { model with Touched = Set.add id model.Touched }
+                )
+        
+        let getIsTouched (id: FieldId) =
+            Set.contains id x.state.Touched
         
         let context: FormContext =
             {
@@ -120,6 +143,8 @@ type FormComponent<'Result, 'c>(props) as x=
                 FormSubmit = formSubmit
                 GetIsRequired = getIsRequired
                 GetErrors = getErrorsMaybe
+                TouchField = touchField
+                GetIsTouched = getIsTouched
             }
 
         let children =

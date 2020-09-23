@@ -27,11 +27,12 @@ let input (id: FieldId) =
                 prop.id id
                 prop.value field.Value
                 prop.onChange field.OnChange
+                prop.onBlur field.TouchField
             ]
         ]
         
-        match field.ErrorMessage with
-        | Some errors ->
+        match field.IsTouched, field.ErrorMessage with
+        | true, Some errors ->
             let formattedErrorMessage = System.String.Join(", ", errors)
             
             Html.div [
@@ -42,6 +43,6 @@ let input (id: FieldId) =
                     ]
                 ]
             ]
-        | None -> ()
+        | _ -> ()
     ]
 
