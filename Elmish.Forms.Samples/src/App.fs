@@ -19,6 +19,7 @@ module SimpleSample =
         
     let render = App.Samples.ApplicativeSample.render
     let validator = App.Samples.ApplicativeSample.validator
+    let source = App.Samples.ApplicativeSample.source
     
     let renderForm =
         React.functionComponent (
@@ -49,6 +50,7 @@ module SimpleSample =
                 React.form { Validator = validator; Render = renderForm; OnSubmit = onSubmit }
                 if model.Submitted.IsSome then
                     Html.pre [ Html.text model.Submitted.Value ]
+                Html.pre [ Html.text source ]
             ]
         )
         

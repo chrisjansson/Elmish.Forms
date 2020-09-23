@@ -29,5 +29,19 @@ let input (id: FieldId) =
                 prop.onChange field.OnChange
             ]
         ]
+        
+        match field.ErrorMessage with
+        | Some errors ->
+            let formattedErrorMessage = System.String.Join(", ", errors)
+            
+            Html.div [
+                Html.label [
+                    prop.text formattedErrorMessage
+                    prop.style [
+                        style.color "red"
+                    ]
+                ]
+            ]
+        | None -> ()
     ]
 

@@ -11,6 +11,7 @@ type FormContext =
         GetValue: FieldId -> string
         SetField: FieldId -> string -> unit
         FormSubmit: Browser.Types.Event -> unit
+        GetErrors: FieldId -> (string list) option
     }
     
 type Field =
@@ -19,6 +20,7 @@ type Field =
         OnChange: Browser.Types.Event -> unit
         Label: string
         IsRequired: bool
+        ErrorMessage: (string list) option
     }
 
 type ElmishFormData<'a, 'b, 'c> = { Validator: Validator<'a, 'b, 'c> }
@@ -42,6 +44,7 @@ let useField (id: FieldId) =
         OnChange = onChange
         Label = form.GetLabel id
         IsRequired = form.GetIsRequired id
+        ErrorMessage = form.GetErrors id
     }
 
 type FormProps<'Result, 'b, 'c> =
@@ -50,43 +53,64 @@ type FormProps<'Result, 'b, 'c> =
         Render: unit -> ReactElement
         OnSubmit: Result<'Result, ValidationErrors> -> unit
     }
+    
+type FormState =
+    {
+        Model: Model
+        Errors: Map<FieldId, string list>
+    }
 
 type FormComponent<'Result, 'c>(props) as x=
-    inherit Fable.React.Component<FormProps<'Result, unit, 'c>, Model>(props)
+    inherit Fable.React.Component<FormProps<'Result, unit, 'c>, FormState>(props)
     
     do
         x.setInitState(Unchecked.defaultof<_>)
         
     override x.componentDidMount() =
-        x.setState(fun _ props -> Form.init props.Validator)
+        x.setState(
+            fun _ props ->
+                { Model = Form.init props.Validator; Errors = Map.empty }
+            )
         
     override x.render() =
         let model = x.state
         
         let updateField (id: FieldId) (value: string) =
-            x.setState(fun model _ -> Form.setField id (FieldState.String value) model)
+            x.setState(fun model _ -> { model with Model = Form.setField id (FieldState.String value) model.Model })
 
         let getValue (id: FieldId) =
-            match Form.getField id model with
+            match Form.getField id model.Model with
             | FieldState.String s -> s
 
         let getLabel (id: FieldId) =
-            Schema.getSchemaFromPath id model
+            Schema.getSchemaFromPath id model.Model
             |> Schema.getLabel
             |> Option.defaultValue ""
 
         let formSubmit (e: Browser.Types.Event) =
             e.preventDefault ()
+            x.setState(
+                fun model _ ->
+                         
+                let result =
+                    Form.validate props.Validator () model.Model.FormFields
 
-            let result =
-                Form.validate props.Validator () model.FormFields
-
-            props.OnSubmit result
+                let errors =
+                    match result with
+                    | Ok _ -> Map.empty
+                    | Error errors -> Map.ofList errors
+            
+                props.OnSubmit result
+                { model with Errors = errors }
+            )
+            
 
         let getIsRequired (id: FieldId) =
-            Schema.getSchemaFromPath id model
+            Schema.getSchemaFromPath id model.Model
             |> Schema.getIsRequired
             
+        let getErrorsMaybe (id: FieldId) =
+            Map.tryFind id model.Errors
         
         let context: FormContext =
             {
@@ -95,6 +119,7 @@ type FormComponent<'Result, 'c>(props) as x=
                 SetField = updateField
                 FormSubmit = formSubmit
                 GetIsRequired = getIsRequired
+                GetErrors = getErrorsMaybe
             }
 
         let children =
