@@ -39,9 +39,14 @@ module Form =
             Schema = validator.Schema
         }
    
-    let setField (id: FieldId) (value: FieldState) (model: Model) =
+    let updateField (id: FieldId) (updater: FieldState -> FieldState) (model: Model) =
         let pathParts = Path.parse id
-            
+        
+        let replaceLeaf (field: Field) =
+            match field with
+            | Field.Leaf l -> updater l |> Field.Leaf
+            | _ -> failwith "expected leaf"
+        
         let rec setRecursive (pathParts: Path list) (fields: Field) =
             match pathParts with
             | [] -> failwithf "Invalid path %s" id
@@ -50,7 +55,7 @@ module Form =
                 | Field.Group g ->
                     g
                     |> Map.find id
-                    |> (fun _ -> Map.add id (Field.Leaf value) g)
+                    |> (fun field -> Map.add id (replaceLeaf field) g)
                     |> Field.Group
                 | _ -> failwithf "Invalid path %s" id
             | (Path.Node head)::tail ->
@@ -82,6 +87,12 @@ module Form =
                     
         let (Field.Group newFormFields) = setRecursive pathParts (Field.Group model.FormFields)
         { model with FormFields = newFormFields }
+        
+    let setField (id: FieldId) (value: string) (model: Model) =
+        let updateFieldState (field: FieldState) =
+            match field with
+            | FieldState.String (s, data) -> FieldState.String (value, data)
+        updateField id updateFieldState model 
 
     let getField (id: FieldId) (model: Model) =
         let pathParts = Path.parse id

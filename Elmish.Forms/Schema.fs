@@ -80,7 +80,7 @@ let rec getDefaultForSchema (schema: SchemaField) =
             l.Default
             |> Option.defaultValue ""
         
-        Field.Leaf (FieldState.String defaultValue)
+        Field.Leaf (FieldState.String (defaultValue, { IsTouched = false }))
     | SchemaField.Type t ->
          t.Fields
          |> Map.toList

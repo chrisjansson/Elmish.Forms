@@ -259,7 +259,7 @@ let choose (defaultValue: 'TSelect) (encode: 'TSelect -> string) (mapping: ('TSe
     let validate formFields context =
         let discriminator =
             match Map.find "discriminator" formFields with
-            | Field.Leaf (FieldState.String l) -> l
+            | Field.Leaf (FieldState.String (l, _)) -> l
             | _ -> failwith "Expected leaf"
         
         let _, validator = getValidatorForDiscriminator discriminator
@@ -297,7 +297,7 @@ let choose (defaultValue: 'TSelect) (encode: 'TSelect -> string) (mapping: ('TSe
                 |> List.map (fun (disc, v) -> (encode disc, v.Schema |> nestSubSchema |> Schema.getDefaultForSchema))
                 
             Map.ofList [
-                "discriminator", Field.Leaf (FieldState.String discriminator)
+                "discriminator", Field.Leaf (FieldState.String (discriminator, { IsTouched = false }))
                 discriminator, Field.Group (
                     match validator.Serialize chooseValue validator.InitFrom None with
                     | Field.Group g -> g
@@ -391,7 +391,7 @@ module Standard =
                     match field with
                     | Field.Leaf fieldState ->
                         match fieldState with
-                        | FieldState.String s ->
+                        | FieldState.String (s, _) ->
                             let result = 
                                 if System.String.IsNullOrWhiteSpace(s) then
                                     None
@@ -403,7 +403,7 @@ module Standard =
                 | None -> failwith "Not implemented"
                      
         let serialize env (initSelector: InitSelector<_, string option> option) (value: string option option) =
-            let defaultNode = FieldState.String "" |> Field.Leaf
+            let defaultNode = FieldState.String ("", { IsTouched = false }) |> Field.Leaf
             
             let valueToSerialize =
                 match initSelector with
@@ -418,7 +418,7 @@ module Standard =
                     | None -> None
                     
             match valueToSerialize with
-            | Some s -> FieldState.String s |> Field.Leaf
+            | Some s -> FieldState.String (s, { IsTouched = false }) |> Field.Leaf
             | None -> defaultNode
 
         {

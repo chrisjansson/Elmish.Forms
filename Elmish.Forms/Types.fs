@@ -35,7 +35,11 @@ and FieldGroup = Map<FieldId, Field>
 and FieldList = FieldGroup list //TODO: change to Field list?
 and FieldId = string
 and [<RequireQualifiedAccess>] FieldState =
-    | String of string
+    | String of string * FieldData
+and FieldData =
+    {
+        IsTouched: bool
+    }
 
 [<RequireQualifiedAccess>]
 type SchemaField =

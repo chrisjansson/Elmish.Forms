@@ -94,14 +94,14 @@ type FormComponent<'Result, 'c>(props) as x=
         let updateField (id: FieldId) (value: string) =
             x.setState(
                 fun model props ->
-                    let newFormModel = Form.setField id (FieldState.String value) model.Model
+                    let newFormModel = Form.setField id value model.Model
                     let model, _ = updateValidation { model with Model = newFormModel } props.Validator
                     model
                 )
 
         let getValue (id: FieldId) =
             match Form.getField id model.Model with
-            | FieldState.String s -> s
+            | FieldState.String (s, _) -> s
 
         let getLabel (id: FieldId) =
             Schema.getSchemaFromPath id model.Model
