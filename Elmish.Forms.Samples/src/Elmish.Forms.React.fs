@@ -64,7 +64,6 @@ type FormState =
     {
         Model: Model
         Errors: Map<FieldId, string list>
-        Touched: Set<FieldId>
     }
 
 type FormComponent<'Result, 'c>(props) as x=
@@ -85,7 +84,7 @@ type FormComponent<'Result, 'c>(props) as x=
     override x.componentDidMount() =
         x.setState(
             fun _ props ->
-                { Model = Form.init props.Validator; Errors = Map.empty; Touched = Set.empty }
+                { Model = Form.init props.Validator; Errors = Map.empty; }
             )
         
     override x.render() =
@@ -126,14 +125,15 @@ type FormComponent<'Result, 'c>(props) as x=
         let getErrorsMaybe (id: FieldId) =
             Map.tryFind id model.Errors
             
-        let touchField (id: FieldId) = //TODO: Validate schema inclusion
+        let touchField (id: FieldId) =
             x.setState(
                 fun model _ ->
-                    { model with Touched = Set.add id model.Touched }
+                    { model with Model = Form.setTouched id model.Model }
                 )
         
         let getIsTouched (id: FieldId) =
-            Set.contains id x.state.Touched
+            match Form.getField id model.Model with
+            | FieldState.String (_, data) -> data.IsTouched
         
         let context: FormContext =
             {

@@ -94,6 +94,12 @@ module Form =
             | FieldState.String (s, data) -> FieldState.String (value, data)
         updateField id updateFieldState model 
 
+    let setTouched (id: FieldId) (model: Model) =
+        let updateFieldState (field: FieldState) =
+            match field with
+            | FieldState.String (s, data) -> FieldState.String (s, { data with IsTouched = true })
+        updateField id updateFieldState model 
+    
     let getField (id: FieldId) (model: Model) =
         let pathParts = Path.parse id
             
