@@ -64,12 +64,13 @@ type FormState =
     {
         Model: Model
         Errors: Map<FieldId, string list>
+        IsSubmitted: bool
     }
 
 type FormComponent<'Result, 'c>(props) as x=
     inherit Fable.React.Component<FormProps<'Result, unit, 'c>, FormState>(props)
     
-    let updateValidation (model: FormState) validator =
+    let updateValidation validator (model: FormState) =
         let result = Form.validate props.Validator () model.Model.FormFields
         let errors =
             match result with
@@ -84,7 +85,13 @@ type FormComponent<'Result, 'c>(props) as x=
     override x.componentDidMount() =
         x.setState(
             fun _ props ->
-                { Model = Form.init props.Validator; Errors = Map.empty; }
+                {
+                    Model = Form.init props.Validator
+                    Errors = Map.empty
+                    IsSubmitted = false
+                }
+                |> updateValidation props.Validator
+                |> fst
             )
         
     override x.render() =
@@ -94,7 +101,7 @@ type FormComponent<'Result, 'c>(props) as x=
             x.setState(
                 fun model props ->
                     let newFormModel = Form.setField id value model.Model
-                    let model, _ = updateValidation { model with Model = newFormModel } props.Validator
+                    let model, _ = updateValidation props.Validator { model with Model = newFormModel } 
                     model
                 )
 
@@ -112,7 +119,8 @@ type FormComponent<'Result, 'c>(props) as x=
             x.setState(
                 fun model props ->
                 
-                let model, result = updateValidation model props.Validator
+                let model, result = updateValidation props.Validator model 
+                let model = { model with IsSubmitted = true }
                 
                 props.OnSubmit result
                 model
@@ -132,8 +140,11 @@ type FormComponent<'Result, 'c>(props) as x=
                 )
         
         let getIsTouched (id: FieldId) =
-            match Form.getField id model.Model with
-            | FieldState.String (_, data) -> data.IsTouched
+            if model.IsSubmitted then
+                true
+            else
+                match Form.getField id model.Model with
+                | FieldState.String (_, data) -> data.IsTouched
         
         let context: FormContext =
             {
@@ -154,7 +165,6 @@ type FormComponent<'Result, 'c>(props) as x=
             [
                 React.contextProvider (formContext, context, children)
             ]
-
 
 let form<'Result, 'b, 'c> props =
     Fable.React.Helpers.ofType<FormComponent<'Result, 'c>, _, _> props []
