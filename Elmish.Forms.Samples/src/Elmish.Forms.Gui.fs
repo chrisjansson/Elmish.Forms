@@ -8,7 +8,12 @@ let input (id: FieldId) =
 
     Html.div [
         let label = field.Label
-
+        let label =
+            if field.IsRequired then
+                sprintf "%s *" label
+            else
+                label
+        
         Html.div [
             Html.label [
                 prop.text label
@@ -18,7 +23,7 @@ let input (id: FieldId) =
 
         Html.div [
             Html.input [
-                prop.placeholder label
+                prop.placeholder field.Label
                 prop.id id
                 prop.value field.Value
                 prop.onChange field.OnChange

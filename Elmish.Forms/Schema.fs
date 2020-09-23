@@ -50,6 +50,14 @@ let withIsRequired (isRequired: bool) (schema: SchemaField) =
     | SchemaField.Group _ -> schema
     | SchemaField.Type _ -> schema
     | SchemaField.Sub _ -> schema
+   
+let rec getIsRequired (schema: SchemaField) =
+    match schema with
+    | SchemaField.Leaf ld -> ld.IsRequired
+    | SchemaField.Group gd -> false
+    | SchemaField.Type td -> false
+    | SchemaField.Sub sd -> false
+    | SchemaField.List ld -> false
     
 let rec getType (schema: SchemaField) =
     match schema with

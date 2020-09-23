@@ -6,6 +6,7 @@ open Fable.Core.JsInterop
 
 type FormContext =
     {
+        GetIsRequired: FieldId -> bool 
         GetLabel: FieldId -> string
         GetValue: FieldId -> string
         SetField: FieldId -> string -> unit
@@ -17,6 +18,7 @@ type Field =
         Value: string
         OnChange: Browser.Types.Event -> unit
         Label: string
+        IsRequired: bool
     }
 
 type ElmishFormData<'a, 'b, 'c> = { Validator: Validator<'a, 'b, 'c> }
@@ -39,6 +41,7 @@ let useField (id: FieldId) =
         Value = value
         OnChange = onChange
         Label = form.GetLabel id
+        IsRequired = form.GetIsRequired id
     }
 
 type FormProps<'Result, 'b, 'c> =
@@ -80,12 +83,18 @@ type FormComponent<'Result, 'c>(props) as x=
 
             props.OnSubmit result
 
+        let getIsRequired (id: FieldId) =
+            Schema.getSchemaFromPath id model
+            |> Schema.getIsRequired
+            
+        
         let context: FormContext =
             {
                 GetLabel = getLabel
                 GetValue = getValue
                 SetField = updateField
                 FormSubmit = formSubmit
+                GetIsRequired = getIsRequired
             }
 
         let children =
