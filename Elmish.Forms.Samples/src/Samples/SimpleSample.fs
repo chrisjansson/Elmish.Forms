@@ -1,4 +1,4 @@
-module App.SimpleSample
+module App.Samples.SimpleSample
 
 open Elmish.Forms
 open Elmish.Forms.React

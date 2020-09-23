@@ -1,7 +1,8 @@
 module App
 
+open System
 open Browser.Dom
-open Fable.Core.JsInterop
+open Feliz
 
 type SampleModel =
     {
@@ -10,51 +11,48 @@ type SampleModel =
 
 module SimpleSample =
     open Elmish.Forms
-    
-    let validator: Validator<string option, unit, unit> =
-        Validator.Standard.text "firstName"
-        |> Validator.withLabel "First name"
-        
-    open Feliz
-    
+
     let model: SampleModel =
         {
             Submitted = None
         }
         
+    let render = App.Samples.ApplicativeSample.render
+    let validator = App.Samples.ApplicativeSample.validator
     
+    let renderForm =
+        React.functionComponent (
+            fun () ->
+                let form = React.useForm()
+                Html.form [
+                    prop.onSubmit form.FormSubmit
+                    prop.children [
+                        render ()
+                        
+                        Html.div [ Html.button [ prop.type' "submit"; prop.text "Submit" ] ]
+                        
+                        if Option.isSome model.Submitted then
+                            Html.pre [ prop.text model.Submitted.Value ]
+                    ]
+
+                ]
+            )
+
     let form =
         React.functionComponent(fun () ->
-            let model, setModel = React.useState(model)
+            let model, setModel = React.useState({ Submitted = None })
             
             let onSubmit result =
                 setModel({ model with Submitted = Some (Fable.Core.JS.JSON.stringify(result)) })
-
-            let render =
-                React.functionComponent (
-                    fun () ->
-                        let form = Elmish.Forms.React.useForm()
-                        Html.form [
-                            prop.onSubmit form.FormSubmit
-                            prop.children [
-                                App.SimpleSample.render ()
-                                
-                                Html.div [ Html.button [ prop.type' "submit"; prop.text "Submit" ] ]
-                                
-                                if Option.isSome model.Submitted then
-                                    Html.pre [ prop.text model.Submitted.Value ]
-                            ]
-
-                        ]
-                    )
             
-            Elmish.Forms.React.form { Validator = App.SimpleSample.validator; Render = render; OnSubmit = onSubmit }
-            
-            
+            React.fragment [
+                React.form { Validator = validator; Render = renderForm; OnSubmit = onSubmit }
+                if model.Submitted.IsSome then
+                    Html.pre [ Html.text model.Submitted.Value ]
+            ]
         )
         
 
-open Feliz
-open Browser.Dom
+
 
 ReactDOM.render(SimpleSample.form, document.getElementById("root"))

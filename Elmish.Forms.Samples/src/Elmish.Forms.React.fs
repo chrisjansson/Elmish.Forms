@@ -48,20 +48,20 @@ type FormProps<'Result, 'b, 'c> =
         OnSubmit: Result<'Result, ValidationErrors> -> unit
     }
 
-let form<'Result, 'b, 'c> =
-    React.functionComponent (fun (props: FormProps<'Result, unit, 'c>) ->
-        let model, setModel =
-            React.useState (Unchecked.defaultof<Model>)
-
-        React.useEffectOnce (fun () ->
-            let state = Form.init props.Validator
-            setModel (state))
-
+type FormComponent<'Result, 'c>(props) as x=
+    inherit Fable.React.Component<FormProps<'Result, unit, 'c>, Model>(props)
+    
+    do
+        x.setInitState(Unchecked.defaultof<_>)
+        
+    override x.componentDidMount() =
+        x.setState(fun _ props -> Form.init props.Validator)
+        
+    override x.render() =
+        let model = x.state
+        
         let updateField (id: FieldId) (value: string) =
-            let formModel =
-                Form.setField id (FieldState.String value) model
-
-            setModel (formModel)
+            x.setState(fun model _ -> Form.setField id (FieldState.String value) model)
 
         let getValue (id: FieldId) =
             match Form.getField id model with
@@ -94,4 +94,8 @@ let form<'Result, 'b, 'c> =
         React.fragment
             [
                 React.contextProvider (formContext, context, children)
-            ])
+            ]
+
+
+let form<'Result, 'b, 'c> props =
+    Fable.React.Helpers.ofType<FormComponent<'Result, 'c>, _, _> props []

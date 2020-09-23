@@ -376,7 +376,10 @@ let mapInit (selector: 'EnvIn -> 'EnvOut) (validator: Validator<_, _,'EnvOut>): 
         Validate = validator.Validate
         Serialize = serialize
     }
-    
+
+[<AutoOpen>]
+module Operators =
+    let (<*>) = apply
 
 module Standard = 
         
