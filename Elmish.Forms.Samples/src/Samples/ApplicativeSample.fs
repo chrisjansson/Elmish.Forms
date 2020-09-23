@@ -15,7 +15,6 @@ type Person =
         LastName: string
     }
 
-
 let validator: Validator<Person, unit, unit> =
     Validator.from (fun firstName middleName lastName ->
             {
@@ -29,31 +28,8 @@ let validator: Validator<Person, unit, unit> =
     <*> (Validator.Standard.text "lastName" |> Validator.withLabel "Last name" |> Validator.isRequired)
     
 let render () =
-    let input (id: FieldId) =
-        let field = useField id
-
-        Html.div [
-            let label = field.Label
-
-            Html.div [
-                Html.label [
-                    prop.text label
-                    prop.htmlFor id
-                ] 
-            ]
-
-            Html.div [
-                Html.input [
-                    prop.placeholder label
-                    prop.id id
-                    prop.value field.Value
-                    prop.onChange field.OnChange
-                ]
-            ]
-        ]
-    
     React.fragment [
-        input "firstName"
-        input "middleName"
-        input "lastName"
+        Gui.input "firstName"
+        Gui.input "middleName"
+        Gui.input "lastName"
     ]
