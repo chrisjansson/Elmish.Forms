@@ -28,6 +28,16 @@ let render () =
         Html.text listLength
         
         for p = 0 to (listLength - 1) do
+            
+            Html.button [
+                prop.text "Remove row"
+                prop.onClick (
+                    fun e ->
+                        e.preventDefault()
+                        form.RemoveListItem "persons" p
+                    )
+            ]
+            
             Gui.input (sprintf "persons[%i].firstName" p)
             Gui.input (sprintf "persons[%i].middleName" p)
             Gui.input (sprintf "persons[%i].lastName" p)
