@@ -24,7 +24,7 @@ let tests =
             
             let expectedModel: Model =
                 {
-                    FormFields = Map.ofSeq [ "fieldId", Field.Leaf (FieldState.String "") ]
+                    FormFields = Map.ofSeq [ "fieldId", Field.Leaf (FieldState.String ("", { IsTouched = false })) ]
                     Schema = model.Schema
                 }
                 
@@ -149,8 +149,8 @@ let tests =
             
             let model =
                 Form.init combined
-                |> Form.setField "fieldId" (FieldState.String "hej")
-                |> Form.setField "fieldId2" (FieldState.String "hej")
+                |> Form.setField "fieldId" "hej"
+                |> Form.setField "fieldId2" "hej"
 
             let actual = Form.validate combined () model.FormFields
             let expected = Ok(("hej", "hej"))
@@ -169,8 +169,8 @@ let tests =
             
             let model =
                 Form.init combined
-                |> Form.setField "fieldId" (FieldState.String "hej")
-                |> Form.setField "fieldId2" (FieldState.String "hej")
+                |> Form.setField "fieldId" "hej"
+                |> Form.setField "fieldId2" "hej"
 
             let actual = Form.validate combined () model.FormFields
             let expected = Error [ "", [ "an error on the group" ] ]
@@ -214,7 +214,7 @@ let tests =
                 test ("Validates valid integer " + input) {
                     
                     let model = Form.init validator
-                    let model = Form.setField "fieldId" (FieldState.String input) model
+                    let model = Form.setField "fieldId" input model
 
                     let actual = Form.validate validator () model.FormFields
                     let expected = Ok (Some expected)
@@ -226,7 +226,7 @@ let tests =
             for input in [ "abc"; "1.2"; "-123a" ] do
                 test ("Rejects invalid integers " + input) {
                     let model = Form.init validator
-                    let model = Form.setField "fieldId" (FieldState.String input) model
+                    let model = Form.setField "fieldId" input model
 
                     let actual = Form.validate validator () model.FormFields
                     let expected = Error [ "fieldId", [ "fieldId should be a valid number" ] ]
@@ -259,7 +259,7 @@ let tests =
             for (name,case) in [ "Empty string", ""; "White space", "  " ] do
                 test ("Validates empty as none" + name) {
                     let model = Form.init textValidator
-                    let model = Form.setField "fieldId" (FieldState.String case) model
+                    let model = Form.setField "fieldId" case model
 
                     let actual = Form.validate textValidator () model.FormFields
                     let expected = Ok None
@@ -269,7 +269,7 @@ let tests =
         
             test "Validates any other string as some" {
                 let model = Form.init textValidator
-                let model = Form.setField "fieldId" (FieldState.String "hello world") model
+                let model = Form.setField "fieldId" "hello world" model
 
                 let actual = Form.validate textValidator () model.FormFields
                 let expected = Ok (Some "hello world")
@@ -280,7 +280,7 @@ let tests =
             for (name, input) in [ "preceding", "  abc"; "succeeding", "abc   " ] do
                 test ("Trims whitespace " + name) {
                     let model = Form.init textValidator
-                    let model = Form.setField "fieldId" (FieldState.String input) model
+                    let model = Form.setField "fieldId" input model
 
                     let actual = Form.validate textValidator () model.FormFields
                     let expected = Ok (Some (input.Trim()))
@@ -295,7 +295,7 @@ let tests =
                 
                 let actual =
                     Form.init validator
-                    |> Form.setField "fieldId" (FieldState.String "Hej")
+                    |> Form.setField "fieldId" "Hej"
                     |> (fun x -> Form.validate validator () x.FormFields)
                 
                 Expect.equal (Ok (Some "Hej")) actual "result"
@@ -308,7 +308,7 @@ let tests =
                 
                 let actual =
                     Form.init validator
-                    |> Form.setField "fieldId" (FieldState.String "Hej")
+                    |> Form.setField "fieldId" "Hej"
                     |> (fun x -> Form.validate validator () x.FormFields)
                 
                 Expect.equal (Error [ "fieldId", [ "an error" ] ]) actual "result"
@@ -345,8 +345,8 @@ let tests =
                 
                 let expectedModel: Model =
                     let subValidatorDefaults = Map.ofSeq [
-                        "1", Field.Leaf (FieldState.String "")
-                        "2", Field.Leaf (FieldState.String "")
+                        "1", Field.Leaf (FieldState.String ("", { IsTouched = false }))
+                        "2", Field.Leaf (FieldState.String ("", { IsTouched = false }))
                     ]
                     
                     {
@@ -372,8 +372,8 @@ let tests =
                 let model = Form.initWithDefault parentValidator (("1", "2"), ("3", "4"))
                 
                 let expectedModel: Model =
-                    let subValidator1Defaults = Map.ofSeq [ "1", Field.Leaf (FieldState.String "1"); "2", Field.Leaf (FieldState.String "2") ]
-                    let subValidator2Defaults = Map.ofSeq [ "1", Field.Leaf (FieldState.String "3"); "2", Field.Leaf (FieldState.String "4") ]
+                    let subValidator1Defaults = Map.ofSeq [ "1", Field.Leaf (FieldState.String ("1", { IsTouched = false })); "2", Field.Leaf (FieldState.String ("2", { IsTouched = false })) ]
+                    let subValidator2Defaults = Map.ofSeq [ "1", Field.Leaf (FieldState.String ("3", { IsTouched = false })); "2", Field.Leaf (FieldState.String ("4", { IsTouched = false })) ]
                     {
                         FormFields = Map.ofSeq [ "1", Field.Group subValidator1Defaults; "2", Field.Group subValidator2Defaults]
                         Schema = model.Schema
@@ -387,10 +387,10 @@ let tests =
                 
                 let model =
                     initialized
-                    |> Form.setField "1.1" (FieldState.String "11")
-                    |> Form.setField "1.2" (FieldState.String "12")
-                    |> Form.setField "2.1" (FieldState.String "21")
-                    |> Form.setField "2.2" (FieldState.String "22")
+                    |> Form.setField "1.1" "11"
+                    |> Form.setField "1.2" "12"
+                    |> Form.setField "2.1" "21"
+                    |> Form.setField "2.2" "22"
                     
                 let result = Form.validate parentValidator () model.FormFields
                 
@@ -402,9 +402,9 @@ let tests =
                 
                 let model =
                     initialized
-                    |> Form.setField "1.1" (FieldState.String "11")
-                    |> Form.setField "1.2" (FieldState.String "12")
-                    |> Form.setField "2.1" (FieldState.String "21")
+                    |> Form.setField "1.1" "11"
+                    |> Form.setField "1.2" "12"
+                    |> Form.setField "2.1" "21"
                     
                 let result = Form.validate parentValidator () model.FormFields
                 
@@ -443,8 +443,8 @@ let tests =
                 let expected =
                     [
                         "texts", Field.List [
-                            Map.ofList [ "id", Field.Leaf (FieldState.String "hello") ]
-                            Map.ofList [ "id", Field.Leaf (FieldState.String "world") ]
+                            Map.ofList [ "id", Field.Leaf (FieldState.String ("hello", { IsTouched = false })) ]
+                            Map.ofList [ "id", Field.Leaf (FieldState.String ("world", { IsTouched = false })) ]
                         ]
                     ] |> Map.ofList
                 
@@ -511,8 +511,8 @@ let tests =
                 
                 let model =
                     Form.initWithDefault validator [ ""; "" ]
-                    |> Form.setField "texts[0].id" (FieldState.String "hello")
-                    |> Form.setField "texts[1].id" (FieldState.String "world")
+                    |> Form.setField "texts[0].id" "hello"
+                    |> Form.setField "texts[1].id" "world"
                                     
                 let result = Form.validate validator () model.FormFields
                 
@@ -559,7 +559,7 @@ let tests =
                 let expected =
                     [
                         "complex", Field.List [
-                            Map.ofList [ "id", Field.Leaf (FieldState.String "hello"); "id2", Field.Leaf (FieldState.String "world") ]
+                            Map.ofList [ "id", Field.Leaf (FieldState.String ("hello", { IsTouched = false })); "id2", Field.Leaf (FieldState.String ("world", { IsTouched = false })) ]
                         ]
                     ] |> Map.ofList
                 
@@ -639,9 +639,9 @@ let tests =
                 
                 let expected =
                     Map.ofList [
-                        "discriminator", Field.Leaf (FieldState.String "1")
-                        "1", Field.Group (Map.ofList [ "opt1", Field.Leaf (FieldState.String "") ])
-                        "2", Field.Group (Map.ofList [ "opt2", Field.Leaf (FieldState.String "") ])
+                        "discriminator", Field.Leaf (FieldState.String ("1", { IsTouched = false }))
+                        "1", Field.Group (Map.ofList [ "opt1", Field.Leaf (FieldState.String ("",  { IsTouched = false })) ])
+                        "2", Field.Group (Map.ofList [ "opt2", Field.Leaf (FieldState.String ("", { IsTouched = false })) ])
                     ]
                     
                 Expect.equal model.FormFields expected "Default value of choose"
@@ -661,9 +661,9 @@ let tests =
                 
                 let expected =
                     Map.ofList [
-                        "discriminator", Field.Leaf (FieldState.String "2")
-                        "1", Field.Group (Map.ofList [ "opt1", Field.Leaf (FieldState.String "") ])
-                        "2", Field.Group (Map.ofList [ "opt2", Field.Leaf (FieldState.String "henlo") ])
+                        "discriminator", Field.Leaf (FieldState.String ("2", { IsTouched = false }))
+                        "1", Field.Group (Map.ofList [ "opt1", Field.Leaf (FieldState.String ("", { IsTouched = false })) ])
+                        "2", Field.Group (Map.ofList [ "opt2", Field.Leaf (FieldState.String ("henlo", { IsTouched = false })) ])
                     ]
                     
                 Expect.equal model.FormFields expected "Default value of choose"
@@ -702,9 +702,9 @@ let tests =
                 
                 let actual =
                     Form.init validator
-                    |> Form.setField "discriminator" (FieldState.String "2")
-                    |> Form.setField "1.opt1" (FieldState.String "option 1")
-                    |> Form.setField "2.opt2" (FieldState.String "option 2")
+                    |> Form.setField "discriminator" "2"
+                    |> Form.setField "1.opt1" "option 1"
+                    |> Form.setField "2.opt2" "option 2"
                     |> (fun x -> Form.validate validator () x.FormFields) 
 
                 let expected = Ok ("2", Some "option 2")
@@ -724,8 +724,8 @@ let tests =
                 
                 let actual =
                     Form.init validator
-                    |> Form.setField "discriminator" (FieldState.String "2")
-                    |> Form.setField "1.opt1" (FieldState.String "option 1")
+                    |> Form.setField "discriminator" "2"
+                    |> Form.setField "1.opt1" "option 1"
                     |> (fun x -> Form.validate validator () x.FormFields) 
 
                 let expected = Error [ "2.opt2", [ "opt2 is required" ] ]
