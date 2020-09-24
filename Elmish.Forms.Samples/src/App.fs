@@ -1,6 +1,5 @@
 module App
 
-open System
 open Browser.Dom
 open Feliz
 
@@ -12,26 +11,42 @@ type SampleModel =
 module SimpleSample =
     open Elmish.Forms
 
-    let render = App.Samples.ApplicativeSample.render
-    let validator = App.Samples.ApplicativeSample.validator
-    let source = App.Samples.ApplicativeSample.source
+    type FormRenderProps =
+        {
+            Render: unit -> ReactElement
+        }
     
     let renderForm =
         React.functionComponent (
-            fun () ->
+            fun (props: FormRenderProps) ->
                 let form = React.useForm()
                 Html.form [
                     prop.onSubmit form.FormSubmit
                     prop.children [
-                        render ()
+                        props.Render ()
                         
-                        Html.div [ Html.button [ prop.type' "submit"; prop.text "Submit" ] ]
+                        Html.div [
+                            Html.button [
+                                prop.type' "submit"
+                                prop.text "Submit"
+                                prop.style [
+                                    style.marginTop 10
+                                ]
+                            ]
+                        ]
                     ]
                 ]
             )
 
-    let form =
-        React.functionComponent(fun () ->
+    type SampleDisplayProps<'a, 'b, 'c> =
+        {
+            Render: unit -> ReactElement
+            Validator: Validator<'a, 'b, 'c>
+            Source: string
+        }
+    
+    let form () =
+        React.functionComponent(fun (props: SampleDisplayProps<_, _, _>) ->
             let model, setModel = React.useState({ Submitted = None })
             
             let onSubmit (result: Result<_, ValidationErrors>) =
@@ -40,16 +55,14 @@ module SimpleSample =
                     | Ok r -> Fable.Core.JS.JSON.stringify(r) |> Ok
                     | Error e ->
                         e
-                        |> List.collect (fun (id, list) -> list)
+                        |> List.collect (fun (_, list) -> list)
                         |> Error
                 
                 
-                setModel(
-                            { model with Submitted = Some resultString }
-                        )
+                setModel({ model with Submitted = Some resultString })
             
             React.fragment [
-                React.form { Validator = validator; Render = renderForm; OnSubmit = onSubmit }
+                React.form { Validator = props.Validator; OnSubmit = onSubmit } [ renderForm { Render = props.Render } ]
                 if model.Submitted.IsSome then
                     match model.Submitted.Value with
                     | Ok r ->
@@ -77,11 +90,14 @@ module SimpleSample =
                   
                         ]
                         
-                Html.pre [ Html.text source ]
+                Html.pre [ Html.text props.Source ]
             ]
         )
         
-
-
-
-ReactDOM.render(SimpleSample.form, document.getElementById("root"))
+let samples =
+    [
+        SimpleSample.form () { Render = App.Samples.SimpleSample.render; Validator = App.Samples.SimpleSample.validator; SimpleSample.Source = App.Samples.SimpleSample.source }
+        SimpleSample.form () { Render = App.Samples.ApplicativeSample.render; Validator = App.Samples.ApplicativeSample.validator; SimpleSample.Source = App.Samples.ApplicativeSample.source }
+    ]
+        
+ReactDOM.render(React.fragment samples, document.getElementById("root"))

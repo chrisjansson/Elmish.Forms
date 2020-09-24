@@ -56,7 +56,6 @@ let useField (id: FieldId) =
 type FormProps<'Result, 'b, 'c> =
     {
         Validator: Validator<'Result, 'b, 'c>
-        Render: unit -> ReactElement
         OnSubmit: Result<'Result, ValidationErrors> -> unit
     }
     
@@ -159,12 +158,12 @@ type FormComponent<'Result, 'c>(props) as x=
             }
 
         let children =
-            if model = Unchecked.defaultof<_> then React.fragment [] else props.Render()
+            if model = Unchecked.defaultof<_> then [|  |] else x.children
 
         React.fragment
             [
                 React.contextProvider (formContext, context, children)
             ]
 
-let form<'Result, 'b, 'c> props =
-    Fable.React.Helpers.ofType<FormComponent<'Result, 'c>, _, _> props []
+let form<'Result, 'b, 'c> props children =
+    Fable.React.Helpers.ofType<FormComponent<'Result, 'c>, _, _> props children
