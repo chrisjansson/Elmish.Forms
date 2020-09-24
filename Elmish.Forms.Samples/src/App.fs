@@ -95,8 +95,65 @@ let form () =
     
 let samples =
     [
-        form () { Render = App.Samples.SimpleSample.render; Validator = App.Samples.SimpleSample.validator; Source = App.Samples.SimpleSample.source }
-        form () { Render = App.Samples.ApplicativeSample.render; Validator = App.Samples.ApplicativeSample.validator; Source = App.Samples.ApplicativeSample.source }
+        "Simple validator", form () { Render = App.Samples.SimpleSample.render; Validator = App.Samples.SimpleSample.validator; Source = App.Samples.SimpleSample.source }
+        "Applicative validator", form () { Render = App.Samples.ApplicativeSample.render; Validator = App.Samples.ApplicativeSample.validator; Source = App.Samples.ApplicativeSample.source }
     ]
         
-ReactDOM.render(React.fragment samples, document.getElementById("root"))
+let sampleApp =
+    React.functionComponent (fun () ->
+            let selectedSampleIndex, setSelectedSample = React.useState(0)
+            let indexedSamples = samples |> List.indexed
+            let selectedSample =
+                indexedSamples
+                |> List.find (fun (index, _) -> index = selectedSampleIndex)
+                |> snd
+                |> snd
+            
+            Html.div [
+                prop.style [
+                    style.display.flex
+                    style.flexDirection.row
+                ]
+                prop.children [
+                    Html.unorderedList [
+                        for index, sample in indexedSamples do
+                            Html.li [
+                                prop.style [
+                                    
+                                    style.listStyleType.none
+                                    if index = selectedSampleIndex then
+                                        style.textDecoration.underline
+                                ]
+                                prop.children [
+                                    Html.a [
+                                        prop.style [
+                                            
+                                        ]
+                                        prop.text (fst sample)
+                                        prop.onClick (
+                                            fun e ->
+                                                e.preventDefault()
+                                                setSelectedSample(index)
+                                                     )
+                                    ]
+                                ]
+
+                            ]
+                    ]
+                    
+                    Html.div [
+                        prop.style [
+                            style.marginLeft 10
+                        ]
+                        prop.children [
+                            selectedSample
+                        ]
+                    ]
+                ]
+                
+
+            ]
+
+        )
+        
+ReactDOM.render(sampleApp, document.getElementById("root"))
