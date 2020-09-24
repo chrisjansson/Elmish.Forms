@@ -14,7 +14,7 @@ type Person =
         LastName: string
     }
 
-let validator: Validator<Person, unit, unit> =
+let validator (): Validator<Person, unit, _> =
     Validator.from (fun firstName middleName lastName ->
             {
                 FirstName = firstName

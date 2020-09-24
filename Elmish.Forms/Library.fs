@@ -100,10 +100,10 @@ module Form =
             | FieldState.String (s, data) -> FieldState.String (s, { data with IsTouched = true })
         updateField id updateFieldState model 
     
-    let getField (id: FieldId) (model: Model) =
+    let rec private getRecursive (id: FieldId) (fields: Field) =
         let pathParts = Path.parse id
-            
-        let rec getRecursive (pathParts: Path list) (fields: Field) =
+        
+        let rec getRecursive (pathParts) (fields: Field) =
             match pathParts with
             | [] -> failwithf "Invalid path %s" id
             | [ Path.Node id ] ->
@@ -133,8 +133,10 @@ module Form =
                     |> Map.find head
                     |> getInList
                 | _ -> failwithf "Invalid path %s, %A" id fields
-                    
-        match getRecursive pathParts (Field.Group model.FormFields) with
+        getRecursive pathParts fields
+    
+    let getField (id: FieldId) (model: Model) =
+        match getRecursive id (Field.Group model.FormFields) with
         | Field.Leaf l -> l
         | _ -> failwith "Path did not end at a leaf node"
     
@@ -186,6 +188,12 @@ module Form =
             | _ -> failwith "expected group from set"
     
         { model with FormFields = fields }
+        
+    let getListLength (fullPath: FieldId) (model: Model) =
+        let field = getRecursive fullPath (Field.Group model.FormFields)
+        match field with
+        | Field.List l -> l.Length
+        | _ -> failwithf "%s did not end in a list" fullPath 
         
     let removeListItem (fullPath: FieldId) (index: int) (model: Model) =
         let path = Path.parse fullPath

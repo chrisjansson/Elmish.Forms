@@ -130,12 +130,12 @@ let getSchemaFromPath (path: FieldId) (model: Model) =
                 inner tail schema
             | SchemaField.List { Id = subId; SubSchema = schema }, (Path.Node head)::[] when subId = head ->
                 schema
-            | SchemaField.List { Id = subId; SubSchema = schema }, (Path.Node head)::tail when subId = head ->
+            | SchemaField.List { Id = subId; SubSchema = schema }, (Path.List (head, _))::tail when subId = head ->
                 inner tail schema
             | SchemaField.Type g, (Path.Node head)::[] ->
                 Map.find head g.Fields
             | SchemaField.Type g, (Path.Node head)::tail ->
                 let schema = Map.find head g.Fields
                 inner tail schema
-            | _ -> failwithf "Invalid schema path %A" path
+            | _ -> failwithf "Invalid schema path %A actual: %A" path schema
     inner path model.Schema

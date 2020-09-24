@@ -14,6 +14,9 @@ type FormContext =
         GetIsTouched: FieldId -> bool
         FormSubmit: Browser.Types.Event -> unit
         GetErrors: FieldId -> (string list) option
+        AddListItem: FieldId -> unit
+        RemoveListItem: FieldId -> int -> unit
+        GetListLength: FieldId -> int
     }
     
 type Field =
@@ -70,7 +73,7 @@ type FormComponent<'Result, 'c>(props) as x=
     inherit Fable.React.Component<FormProps<'Result, unit, 'c>, FormState>(props)
     
     let updateValidation validator (model: FormState) =
-        let result = Form.validate props.Validator () model.Model.FormFields
+        let result = Form.validate validator () model.Model.FormFields
         let errors =
             match result with
             | Ok _ -> Map.empty
@@ -145,6 +148,13 @@ type FormComponent<'Result, 'c>(props) as x=
                 match Form.getField id model.Model with
                 | FieldState.String (_, data) -> data.IsTouched
         
+        let addListItem (id: FieldId) =
+            x.setState(fun model _ -> { model with Model = Form.addListItem id model.Model })
+        
+        let removeListItem (id: FieldId) index =
+            x.setState(fun model _ -> { model with Model = Form.removeListItem id index model.Model })
+        
+        
         let context: FormContext =
             {
                 GetLabel = getLabel
@@ -155,6 +165,9 @@ type FormComponent<'Result, 'c>(props) as x=
                 GetErrors = getErrorsMaybe
                 TouchField = touchField
                 GetIsTouched = getIsTouched
+                AddListItem = addListItem
+                RemoveListItem = removeListItem
+                GetListLength = fun id -> Form.getListLength id model.Model
             }
 
         let children =

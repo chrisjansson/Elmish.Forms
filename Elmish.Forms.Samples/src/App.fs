@@ -96,8 +96,9 @@ let form () =
 let samples =
     [
         "Simple validator", form () { Render = App.Samples.SimpleSample.render; Validator = App.Samples.SimpleSample.validator; Source = App.Samples.SimpleSample.source }
-        "Applicative validator", form () { Render = App.Samples.ApplicativeSample.render; Validator = App.Samples.ApplicativeSample.validator; Source = App.Samples.ApplicativeSample.source }
+        "Applicative validator", form () { Render = App.Samples.ApplicativeSample.render; Validator = App.Samples.ApplicativeSample.validator (); Source = App.Samples.ApplicativeSample.source }
         "Choose validator", form () { Render = App.Samples.ChooseSample.render; Validator = App.Samples.ChooseSample.validator; Source = App.Samples.ChooseSample.source }
+        "List validator", form () { Render = App.Samples.List.render; Validator = App.Samples.List.validator; Source = App.Samples.List.source }
     ]
         
 let sampleApp =
