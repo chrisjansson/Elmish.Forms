@@ -3,7 +3,6 @@ module App.Samples.ApplicativeSample
 
 open Elmish.Forms
 open Elmish.Forms.Validator.Operators
-open Elmish.Forms.React
 open Feliz
 
 let source: string = Fable.Core.JsInterop.importDefault (Utils.importLiteral + __SOURCE_FILE__)
