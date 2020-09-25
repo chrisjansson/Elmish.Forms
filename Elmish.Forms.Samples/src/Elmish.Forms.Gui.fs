@@ -51,7 +51,6 @@ let inputC =
                 ]
             | _ -> ()
         ]
-        
     )
 
 let input (id: FieldId) = inputC { Id = id }

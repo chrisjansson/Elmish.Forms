@@ -5,7 +5,6 @@
   <ItemGroup>
     <Compile Include="Elmish.Forms.React.fs" />
     <Compile Include="Elmish.Forms.Gui.fs" />
-    <Compile Include="Utils.fs" />
     <Compile Include="Samples\SimpleSample.fs" />
     <Compile Include="Samples\ApplicativeSample.fs" />
     <Compile Include="Samples\ListSample.fs" />
