@@ -18,6 +18,13 @@ type FormContext =
         RemoveListItem: FieldId -> int -> unit
         GetListLength: FieldId -> int
     }
+and ListContext =
+    {
+        AddItem: unit -> unit
+        RemoveItem: int -> unit
+        Length: int
+        RenderItems: ((unit -> unit) -> Fable.React.ReactElement) -> Fable.React.ReactElement
+    }
     
 type Field =
     {
@@ -32,13 +39,29 @@ type Field =
 
 type ElmishFormData<'a, 'b, 'c> = { Validator: Validator<'a, 'b, 'c> }
 
+type PrefixContext =
+    {
+        Prefix: FieldId
+    }
+
 let formContext = React.createContext<FormContext> ()
 
-let useForm () = React.useContext (formContext)
+let prefixContext = React.createContext<PrefixContext>(defaultValue = { Prefix = "" })
+
+let useForm () =
+    React.useContext (formContext)
+
+let usePrefix () =
+    React.useContext(prefixContext).Prefix
+
+let prefixContextProvider (prefix: FieldId) (children: Fable.React.ReactElement) =
+    React.contextProvider(prefixContext, { Prefix = prefix }, children)
 
 let useField (id: FieldId) =
     let form = useForm ()
-
+    let prefix = usePrefix()
+    let id = prefix + id
+    
     let value = form.GetValue id
 
     let onChange (event: Browser.Types.Event) =
@@ -55,6 +78,55 @@ let useField (id: FieldId) =
         TouchField = fun _ -> form.TouchField id
         IsTouched = form.GetIsTouched id
     }
+    
+    
+type ListPrefixProps =
+    {
+        Id: FieldId
+        Render: (unit -> unit) -> Fable.React.ReactElement
+    }
+    
+let withListPrefix' =
+    React.functionComponent (fun (props: ListPrefixProps) ->
+        let id = props.Id
+        let render = props.Render
+        
+        let prefix = usePrefix ()
+        let prefixedId =
+            if prefix = "" then
+                id
+            else
+                sprintf "%s.%s" prefix id
+                
+        printfn "%A" prefixedId
+        let form = useForm ()
+        let listLength = form.GetListLength prefixedId
+        
+        React.fragment [
+            for i = 0 to (listLength - 1) do
+                
+                let removeItem () =
+                    form.RemoveListItem prefixedId i
+                
+                prefixContextProvider (sprintf "%s[%i]." prefixedId i) (render removeItem)
+        ]
+    )
+    
+let withListPrefix (id: FieldId) (render: _ -> Fable.React.ReactElement) = withListPrefix' { Id = id; Render = render }
+    
+    
+let useList (id: FieldId): ListContext =
+    let form = useForm ()
+    let prefix = usePrefix()
+    let id = prefix + id
+    
+    {
+        AddItem = fun () -> form.AddListItem id
+        RemoveItem = fun index -> form.RemoveListItem id index
+        Length = form.GetListLength id
+        RenderItems = fun render -> withListPrefix id render
+    }
+
 
 type FormProps<'Result, 'b, 'c> =
     {
@@ -180,3 +252,5 @@ type FormComponent<'Result, 'c>(props) as x=
 
 let form<'Result, 'b, 'c> props children =
     Fable.React.Helpers.ofType<FormComponent<'Result, 'c>, _, _> props children
+
+    

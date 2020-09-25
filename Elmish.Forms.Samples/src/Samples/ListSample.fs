@@ -12,40 +12,42 @@ let validator: Validator<Person list, unit, unit> =
     
 let render () =
     React.fragment [
+        let persons = React.useList "persons"
         
-        let form = React.useForm()
+        Html.div [
+            Html.text persons.Length
+        ]
         
         Html.button [
             prop.text "Add row"
             prop.onClick (
                 fun e ->
                     e.preventDefault()
-                    form.AddListItem "persons"
+                    persons.AddItem ()
                 )
         ]
 
-        let listLength = form.GetListLength "persons"
-        Html.text listLength
-        
-        for p = 0 to (listLength - 1) do
-            Html.div [
-                prop.style [
-                    style.display.flex
-                    style.flexDirection.row
-                ]
-                prop.children [
-                    Gui.input (sprintf "persons[%i].firstName" p)
-                    Gui.input (sprintf "persons[%i].middleName" p)
-                    Gui.input (sprintf "persons[%i].lastName" p)
-            
-                    Html.button [
-                        prop.text "Remove row"
-                        prop.onClick (
-                            fun e ->
-                                e.preventDefault()
-                                form.RemoveListItem "persons" p
-                            )
+        persons.RenderItems (
+            fun removeItem ->
+                Html.div [
+                    prop.style [
+                        style.display.flex
+                        style.flexDirection.row
                     ]
+                    prop.children [
+                        Gui.input "firstName"
+                        Gui.input "middleName"
+                        Gui.input "lastName"
+                
+                        Html.button [
+                            prop.text "Remove row"
+                            prop.onClick (
+                                fun e ->
+                                    e.preventDefault()
+                                    removeItem ()
+                                )
+                        ]
+                ]
             ]
-        ]
+        )
     ]
