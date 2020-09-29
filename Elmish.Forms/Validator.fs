@@ -111,6 +111,7 @@ let apply (vf: Validator<_, _, _>) (va: Validator<_, _, _>): Validator<_, _, _> 
         | SchemaField.Sub s -> [ s.Id, SchemaField.Sub s ]
         | SchemaField.Group g -> g.Fields |> Map.toList
         | SchemaField.Type t -> Map.toList t.Fields
+        | SchemaField.List l -> [ l.Id, SchemaField.List l ]
         
     let schema = SchemaField.Type
                      {
@@ -158,7 +159,7 @@ let withSub (subId: FieldId) (validator: Validator<_, _, _>): Validator<_, _, _>
     }
     
 let withList (listId: FieldId) (validator: Validator<'a, _, _>): Validator<'a list, _, _> =
-    let serialize env (initSelector: InitSelector<_, _> option) (value: _ option) =
+    let serialize env (initSelector: InitSelector<_, _> option) (_: _ option) =
         let defaultNode = Field.List []
         match initSelector with
         | Some initSelector ->
