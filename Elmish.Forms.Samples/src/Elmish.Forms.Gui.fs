@@ -8,7 +8,11 @@ type InputProps =
         Id: FieldId
     }
 
-let inputC =
+type prop with
+    static member validationFor(id: FieldId) =
+        Interop.mkAttr "data-validation-error-for" id
+
+let input' =
     React.functionComponent (fun (props: InputProps) ->
         let field = useField props.Id
 
@@ -43,7 +47,7 @@ let inputC =
                 
                 Html.div [
                     Html.label [
-                        Interop.mkAttr "data-validation-error-for" props.Id
+                        prop.validationFor props.Id
                         prop.text formattedErrorMessage
                         prop.style [
                             style.color "red"
@@ -54,7 +58,7 @@ let inputC =
         ]
     )
 
-let input (id: FieldId) = inputC { Id = id }
+let input (id: FieldId) = input' { Id = id }
     
     
 
