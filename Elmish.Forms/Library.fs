@@ -12,9 +12,10 @@ module Form =
             | SchemaField.List ls ->
                 let value = validator.Serialize env validator.InitFrom None
                 match value with
-                | Field.List ld -> Map.ofList [ ls.Id, value ]
+                | Field.List _ -> Map.ofList [ ls.Id, value ]
                 | _ -> failwith "should serialize to gd"
             | SchemaField.Group _
+            | SchemaField.Sub _
             | SchemaField.Type _ ->
                 let value = validator.Serialize env validator.InitFrom None
                 match value with
@@ -85,13 +86,14 @@ module Form =
                     |> Field.Group
                 | _ -> failwithf "Invalid path %s, %A" id fields
                     
-        let (Field.Group newFormFields) = setRecursive pathParts (Field.Group model.FormFields)
-        { model with FormFields = newFormFields }
+        match setRecursive pathParts (Field.Group model.FormFields) with
+        | Field.Group newFormFields -> { model with FormFields = newFormFields }
+        | _ -> failwith "Expected field group"
         
     let setField (id: FieldId) (value: string) (model: Model) =
         let updateFieldState (field: FieldState) =
             match field with
-            | FieldState.String (s, data) -> FieldState.String (value, data)
+            | FieldState.String (_, data) -> FieldState.String (value, data)
         updateField id updateFieldState model 
 
     let setTouched (id: FieldId) (model: Model) =
@@ -162,7 +164,7 @@ module Form =
                 | _ -> failwithf "Expected to find list %A" fullPath
             | head::tail ->
                 match head with
-                | Path.List (s, index) ->
+                | Path.List (_, index) ->
                     match fields with
                     | Field.List l ->
                         let modify node =
@@ -205,13 +207,13 @@ module Form =
                 | Field.List l ->
                     l
                     |> List.indexed
-                    |> List.filter (fun (i, e) -> i <> index)
+                    |> List.filter (fun (i, _) -> i <> index)
                     |> List.map (fun (_, e) -> e)
                     |> Field.List
                 | _ -> failwithf "Expected to find list %A" fullPath
             | head::tail ->
                 match head with
-                | Path.List (s, index) ->
+                | Path.List (_, index) ->
                     match fields with
                     | Field.List l ->
                         let modify node =
