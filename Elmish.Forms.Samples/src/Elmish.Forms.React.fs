@@ -1,5 +1,6 @@
 module Elmish.Forms.React
 
+open Browser.Types
 open Elmish.Forms
 open Feliz
 open Fable.Core.JsInterop
@@ -127,7 +128,6 @@ let useList (id: FieldId): ListContext =
         RenderItems = fun render -> withListPrefix id render
     }
 
-
 type FormProps<'Result, 'b, 'c> =
     {
         Validator: Validator<'Result, 'b, 'c>
@@ -138,6 +138,7 @@ type FormState =
     {
         Model: Model
         Errors: Map<FieldId, string list>
+        NotShownErrors: Set<FieldId>
         IsSubmitted: bool
     }
 
@@ -154,20 +155,59 @@ type FormComponent<'Result, 'c>(props) as x=
         { model with Errors = errors }, result
     
     do
-        x.setInitState(Unchecked.defaultof<_>)
+        let model: FormState =
+            {
+                Model = Form.init props.Validator
+                Errors = Map.empty
+                NotShownErrors = Set.empty
+                IsSubmitted = false
+            }
+            |> updateValidation props.Validator
+            |> fst
+        
+        x.setInitState(model)
+    
+    let mutable inputElement: Element option = None
+    
+    let updateShownErrors model =
+        match inputElement with
+        | Some el ->
+            let elements = el.querySelectorAll("[data-validation-error-for]")
+            let errorsWithShownIds =
+                [
+                    for i = 0 to (elements.length - 1) do
+                        let e = elements.[i]
+                        let a = e.attributes.getNamedItem("data-validation-error-for")
+                        a.value
+                ]
+                |> Set.ofList
+            
+            let notShownErrors =
+                model.Errors
+                |> Map.filter (fun key _ -> not (Set.contains key errorsWithShownIds))
+                |> Map.toList
+                |> List.map fst
+                |> Set.ofList
+            
+            { model with NotShownErrors = notShownErrors }
+        | None ->
+            { model with NotShownErrors = Set.empty }
         
     override x.componentDidMount() =
-        x.setState(
-            fun _ props ->
-                {
-                    Model = Form.init props.Validator
-                    Errors = Map.empty
-                    IsSubmitted = false
-                }
-                |> updateValidation props.Validator
-                |> fst
-            )
-        
+        x.setState(fun model _ -> updateShownErrors model)
+    
+    override x.componentDidUpdate(_, prevState) =
+        let newModel = updateShownErrors prevState
+        if prevState.Errors = newModel.Errors && prevState.NotShownErrors = newModel.NotShownErrors then
+            ()
+        else
+            x.setState(
+                fun x _ ->
+                    if newModel.NotShownErrors.IsEmpty |> not then 
+                        Fable.Core.JS.console.warn("Validation errors not shown: ", Set.toArray newModel.NotShownErrors)
+                    { x with NotShownErrors = newModel.NotShownErrors }
+                )
+
     override x.render() =
         let model = x.state
         
@@ -226,7 +266,6 @@ type FormComponent<'Result, 'c>(props) as x=
         let removeListItem (id: FieldId) index =
             x.setState(fun model _ -> { model with Model = Form.removeListItem id index model.Model })
         
-        
         let context: FormContext =
             {
                 GetLabel = getLabel
@@ -242,13 +281,12 @@ type FormComponent<'Result, 'c>(props) as x=
                 GetListLength = fun id -> Form.getListLength id model.Model
             }
 
-        let children =
-            if model = Unchecked.defaultof<_> then [|  |] else x.children
-
-        React.fragment
-            [
-                React.contextProvider (formContext, context, children)
+        Html.div [
+            prop.ref (fun e -> inputElement <- Option.ofObj e)
+            prop.children [
+                React.contextProvider (formContext, context, x.children)
             ]
+        ]
 
 let form<'Result, 'b, 'c> props children =
     Fable.React.Helpers.ofType<FormComponent<'Result, 'c>, _, _> props children

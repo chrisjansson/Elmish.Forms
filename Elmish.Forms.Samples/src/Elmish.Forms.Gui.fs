@@ -43,6 +43,7 @@ let inputC =
                 
                 Html.div [
                     Html.label [
+                        Interop.mkAttr "data-validation-error-for" props.Id
                         prop.text formattedErrorMessage
                         prop.style [
                             style.color "red"
