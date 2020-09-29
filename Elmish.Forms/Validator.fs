@@ -207,7 +207,7 @@ let withList (listId: FieldId) (validator: Validator<'a, _, _>): Validator<'a li
                     Error errors
                     
             field
-            |> List.mapi (fun index f -> runValidationForIndex index f) //TODO: map context appropriately, a test that checks that isRequired can label correctly should work
+            |> List.mapi (fun index f -> runValidationForIndex index f)
             |> Result.traverse    
     
     {
