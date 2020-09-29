@@ -1,20 +1,25 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
-  </PropertyGroup>
+    <PropertyGroup>
+        <TargetFramework>netstandard2.0</TargetFramework>
+    </PropertyGroup>
 
-  <ItemGroup>
-    <Compile Include="Extensions.fs" />
-    <Compile Include="Types.fs" />
-    <Compile Include="Path.fs" />
-    <Compile Include="Schema.fs" />
-    <Compile Include="Validator.fs" />
-    <Compile Include="Library.fs" />
-  </ItemGroup>
+    <PropertyGroup>
+      <PackageId>Elmish.Forms</PackageId>
+      <Version>0.1</Version>
+    </PropertyGroup>
+  
+    <ItemGroup>
+        <Compile Include="Extensions.fs"/>
+        <Compile Include="Types.fs"/>
+        <Compile Include="Path.fs"/>
+        <Compile Include="Schema.fs"/>
+        <Compile Include="Validator.fs"/>
+        <Compile Include="Library.fs"/>
+    </ItemGroup>
 
-  <ItemGroup>
-    <Content Include="*.fsproj; **\*.fs" PackagePath="fable\" />
-  </ItemGroup>
+    <ItemGroup>
+        <Content Include="*.fsproj; **\*.fs" PackagePath="fable\"/>
+    </ItemGroup>
 
 </Project>
