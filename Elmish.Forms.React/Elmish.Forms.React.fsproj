@@ -1,0 +1,23 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>netstandard2.0</TargetFramework>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Elmish.Forms" Version="1.0.0" />
+        <PackageReference Include="Fable.Browser.Dom" Version="2.1.0" />
+        <PackageReference Include="Fable.Core" Version="3.1.4" />
+        <PackageReference Include="Feliz" Version="1.14.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Content Include="*.fsproj; **\*.fs" PackagePath="fable\" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Compile Include="Elmish.Forms.React.fs" />
+      <Compile Include="Elmish.Forms.Gui.fs" />
+    </ItemGroup>
+    
+</Project>

@@ -3,8 +3,6 @@
     <TargetFramework>netstandard2.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="Elmish.Forms.React.fs" />
-    <Compile Include="Elmish.Forms.Gui.fs" />
     <Compile Include="Utils.fs" />
     <Compile Include="Samples\SimpleSample.fs" />
     <Compile Include="Samples\ApplicativeSample.fs" />
@@ -13,11 +11,9 @@
     <Compile Include="App.fs" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="Elmish.Forms.React" Version="1.0.0" />
     <PackageReference Include="Fable.Browser.Dom" Version="2.1.0" />
     <PackageReference Include="Fable.Core" Version="3.1.4" />
     <PackageReference Include="Feliz" Version="1.14.0" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\..\Elmish.Forms\Elmish.Forms.fsproj" />
   </ItemGroup>
 </Project>

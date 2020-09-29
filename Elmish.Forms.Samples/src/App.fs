@@ -1,4 +1,4 @@
-module App
+module App.Program
 
 open Browser.Dom
 open Feliz
