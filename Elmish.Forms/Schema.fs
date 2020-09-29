@@ -39,6 +39,11 @@ let rec withLabel (label: string) (schema: SchemaField) =
             {
                 sd with SubSchema = withLabel label sd.SubSchema
             }
+    | SchemaField.List ld ->
+        SchemaField.List
+            {
+                 ld with SubSchema = withLabel label ld.SubSchema
+            }
             
 let withIsRequired (isRequired: bool) (schema: SchemaField) =
     match schema with
@@ -50,14 +55,15 @@ let withIsRequired (isRequired: bool) (schema: SchemaField) =
     | SchemaField.Group _ -> schema
     | SchemaField.Type _ -> schema
     | SchemaField.Sub _ -> schema
+    | SchemaField.List _ -> schema
    
 let rec getIsRequired (schema: SchemaField) =
     match schema with
     | SchemaField.Leaf ld -> ld.IsRequired
-    | SchemaField.Group gd -> false
-    | SchemaField.Type td -> false
-    | SchemaField.Sub sd -> false
-    | SchemaField.List ld -> false
+    | SchemaField.Group _ -> false
+    | SchemaField.Type _ -> false
+    | SchemaField.Sub _ -> false
+    | SchemaField.List _ -> false
     
 let rec getType (schema: SchemaField) =
     match schema with
@@ -65,6 +71,7 @@ let rec getType (schema: SchemaField) =
     | SchemaField.Group gd -> gd.Type
     | SchemaField.Type td -> td.Type
     | SchemaField.Sub td -> sprintf "Sub with %s" (getType td.SubSchema)
+    | SchemaField.List ld -> sprintf "List with %s" (getType ld.SubSchema)
     
 let withType (t: string) (schema: SchemaField) =
     match schema with
@@ -72,6 +79,7 @@ let withType (t: string) (schema: SchemaField) =
     | SchemaField.Group gd -> SchemaField.Group { gd with Type = t }
     | SchemaField.Type td -> SchemaField.Type { td with Type = t }
     | SchemaField.Sub _ -> schema
+    | SchemaField.List _ -> schema
         
 let rec getDefaultForSchema (schema: SchemaField) =
     match schema with
