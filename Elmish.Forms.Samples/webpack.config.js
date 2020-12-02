@@ -21,5 +21,10 @@ module.exports = {
             test: /\.fs(x|proj)?$/,
             use: "fable-loader"
         }]
+    },
+    resolve: {
+        alias: {
+            "react": path.resolve(__dirname, 'node_modules/react')
+        }
     }
 }
