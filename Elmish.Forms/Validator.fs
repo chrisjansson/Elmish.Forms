@@ -518,3 +518,24 @@ module Standard =
         match System.Int32.TryParse(s) with
         | true, i -> Some i
         | _ -> None
+        
+        
+    let rec asGuid (validator: Validator<string option, _, _>): Validator<System.Guid option, _, _> =
+        let validate (s: string) =
+            match tryParseGuid s with
+            | Some i -> Ok i
+            | None -> Error (fun label -> [ sprintf "%s should be a valid guid" label ])
+        
+        let serialize (v: System.Guid) =
+            string v
+        
+        bindValidateO
+            "int"
+            validate
+            serialize
+            validator
+        
+    and tryParseGuid (s: string) =
+        match System.Guid.TryParse(s) with
+        | true, i -> Some i
+        | _ -> None
