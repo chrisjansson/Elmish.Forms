@@ -18,6 +18,8 @@ type FormContext =
         AddListItem: FieldId -> unit
         RemoveListItem: FieldId -> int -> unit
         GetListLength: FieldId -> int
+        IsInvalid: bool
+        IsSubmitted: bool
     }
 and ListContext =
     {
@@ -31,6 +33,7 @@ type Field =
     {
         Value: string
         OnChange: Browser.Types.Event -> unit
+        OnChangeText: string -> unit
         Label: string
         IsRequired: bool
         ErrorMessage: (string list) option
@@ -69,10 +72,14 @@ let useField (id: FieldId) =
         let value = event.currentTarget?value
 
         form.SetField id value
+        
+    let onChangeText (value: string) =
+        form.SetField id value
 
     {
         Value = value
         OnChange = onChange
+        OnChangeText = onChangeText
         Label = form.GetLabel id
         IsRequired = form.GetIsRequired id
         ErrorMessage = form.GetErrors id
@@ -279,6 +286,8 @@ type FormComponent<'Result, 'c>(props) as x=
                 AddListItem = addListItem
                 RemoveListItem = removeListItem
                 GetListLength = fun id -> Form.getListLength id model.Model
+                IsInvalid = not (Map.isEmpty model.Errors)
+                IsSubmitted = model.IsSubmitted
             }
 
         Html.div [
