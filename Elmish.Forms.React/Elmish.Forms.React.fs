@@ -138,6 +138,7 @@ let useList (id: FieldId): ListContext =
 type FormProps<'Result, 'b, 'c> =
     {
         Validator: Validator<'Result, 'b, 'c>
+        InitValue: 'c option
         OnSubmit: Result<'Result, ValidationErrors> -> unit
     }
     
@@ -164,7 +165,10 @@ type FormComponent<'Result, 'c>(props) as x=
     do
         let model: FormState =
             {
-                Model = Form.init props.Validator
+                Model =
+                    match props.InitValue with
+                    | Some v -> Form.initWithDefault props.Validator v
+                    | None -> Form.init props.Validator
                 Errors = Map.empty
                 NotShownErrors = Set.empty
                 IsSubmitted = false
