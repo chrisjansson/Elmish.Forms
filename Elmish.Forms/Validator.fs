@@ -530,12 +530,32 @@ module Standard =
             string v
         
         bindValidateO
-            "int"
+            "guid"
             validate
             serialize
             validator
         
     and tryParseGuid (s: string) =
         match System.Guid.TryParse(s) with
+        | true, i -> Some i
+        | _ -> None
+    
+    let rec asPositiveDecimal (validator: Validator<string option, _, _>): Validator<System.Decimal option, _, _> =
+        let validate (s: string) =
+            match tryParseDecimal s with
+            | Some i -> Ok i
+            | None -> Error (fun label -> [ sprintf "%s should be a valid positive number" label ])
+        
+        let serialize (v: System.Decimal) =
+            string v
+        
+        bindValidateO
+            "decimal"
+            validate
+            serialize
+            validator
+        
+    and tryParseDecimal (s: string) =
+        match System.Decimal.TryParse(s) with
         | true, i -> Some i
         | _ -> None
