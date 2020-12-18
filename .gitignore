@@ -203,3 +203,4 @@ project.lock.json
 /.idea/.idea.Elmish.Forms/.idea/modules.xml
 /.idea/.idea.Elmish.Forms/.idea/projectSettingsUpdater.xml
 /.idea/.idea.Elmish.Forms/.idea/workspace.xml
+**/*.fs.js
