@@ -130,9 +130,9 @@ let useList (id: FieldId): ListContext =
     
     {
         AddItem = fun () -> form.AddListItem id
-        RemoveItem = fun index -> form.RemoveListItem id index
+        RemoveItem = form.RemoveListItem id
         Length = form.GetListLength id
-        RenderItems = fun render -> withListPrefix id render
+        RenderItems = withListPrefix id
     }
 
 type FormProps<'Result, 'b, 'c> =

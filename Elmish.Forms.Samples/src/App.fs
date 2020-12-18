@@ -54,14 +54,14 @@ let form () =
                 | Ok r -> Fable.Core.JS.JSON.stringify(r) |> Ok
                 | Error e ->
                     e
-                    |> List.collect (fun (_, list) -> list)
+                    |> List.collect snd
                     |> Error
             
             
             setModel({ model with Submitted = Some resultString })
         
         React.fragment [
-            React.form { Validator = props.Validator; OnSubmit = onSubmit } [ renderForm { Render = props.Render } ]
+            React.form { Validator = props.Validator; OnSubmit = onSubmit; InitValue = None } [ renderForm { Render = props.Render } ]
             if model.Submitted.IsSome then
                 match model.Submitted.Value with
                 | Ok r ->
