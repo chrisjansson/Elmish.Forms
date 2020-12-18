@@ -203,4 +203,5 @@ project.lock.json
 /.idea/.idea.Elmish.Forms/.idea/modules.xml
 /.idea/.idea.Elmish.Forms/.idea/projectSettingsUpdater.xml
 /.idea/.idea.Elmish.Forms/.idea/workspace.xml
-**/*.fs.js
+/.idea/.idea.Elmish.Forms/.idea/contentModel.xml
+/.idea/.idea.Elmish.Forms/.idea/riderModule.iml
