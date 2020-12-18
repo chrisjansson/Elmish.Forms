@@ -1,4 +1,5 @@
 public/bundle.js*
+**/*.fs.js
 
 # Node
 node_modules/
@@ -205,3 +206,4 @@ project.lock.json
 /.idea/.idea.Elmish.Forms/.idea/workspace.xml
 /.idea/.idea.Elmish.Forms/.idea/contentModel.xml
 /.idea/.idea.Elmish.Forms/.idea/riderModule.iml
+/Elmish.Forms.React/Elmish.Forms.React.fs.js
