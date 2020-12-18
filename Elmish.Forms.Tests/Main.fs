@@ -5,5 +5,5 @@ open Expecto
 [<EntryPoint>]
 let main argv =
     Tests.runTestsInAssemblyWithCLIArgs [
-//        CLIArguments.Filter_Test_Case "Initializes list from data 1"
+//        CLIArguments.Filter_Test_Case "Add list item 1"
     ] argv

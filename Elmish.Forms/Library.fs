@@ -144,7 +144,10 @@ module Form =
     
     let addListItem (fullPath: FieldId) (model: Model) =
         let path = Path.parse fullPath
-        let schema = Schema.getSchemaFromPath fullPath model
+        let schema =
+            match Schema.getSchemaFromPath fullPath model with
+            | SchemaField.List l -> l.SubSchema
+            | x -> x 
         let defaultAtPath =
             match Schema.getDefaultForSchema schema with
             | Field.Group g -> g

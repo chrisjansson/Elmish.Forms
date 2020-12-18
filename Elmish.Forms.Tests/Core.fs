@@ -781,7 +781,7 @@ let tests =
                 Expect.equal model.FormFields expected "Default initialized list"
             }
 
-            test "Initializes list from data 1" {
+            test "Initializes list from data" {
                 
                                 
                 let listValidator: Validator<string * ((string * string) list), _, string * ((string * string) list)> =
@@ -804,61 +804,81 @@ let tests =
                                     
                 Expect.equal model.FormFields expected "Default initialized list"
             }
-//
-//            test "Validates list" {
-//                let validator = Validator.withList "complex" complexValidator |> Validator.initFrom (fun x -> x)
-//                
-//                let model = Form.initWithDefault validator [ "hello", "world" ]
-//                                    
-//                let result = Form.validate validator () model.FormFields
-//                
-//                let expected = Ok ([ "hello", "world" ])
-//                
-//                Expect.equal result expected "Validated result"
-//            }
-//            
-//            test "Validates invalid list" {
-//                let validator = Validator.withList "complex" complexValidator |> Validator.initFrom (fun x -> x)
-//                
-//                let model = Form.initWithDefault validator [ "hello", "" ]
-//                                    
-//                let result = Form.validate validator () model.FormFields
-//                
-//                let expected = Error [("complex[0].id2", ["id2 is required"])]
-//                
-//                Expect.equal result expected "Validated result"
-//            }
-//            
-//            test "Add list item" {
-//                let validator = Validator.withList "complex" complexValidator |> Validator.initFrom (fun x -> x)
-//                
-//                let model =
-//                    Form.initWithDefault validator [ ]
-//                    |> Form.addListItem "complex"
-//                                    
-//                let result = Form.validate validator () model.FormFields
-//                
-//                let expected = Error [
-//                    ("complex[0].id", ["id is required"])
-//                    ("complex[0].id2", ["id2 is required"])
-//                ]
-//                
-//                Expect.equal result expected "Validated result"
-//            }
-//
-//            test "Remove list item" {
-//                let validator = Validator.withList "complex" complexValidator |> Validator.initFrom (fun x -> x)
-//                
-//                let model =
-//                    Form.initWithDefault validator [ ]
-//                    |> Form.addListItem "complex"
-//                    |> Form.removeListItem "complex" 0
-//                                    
-//                let result = Form.validate validator () model.FormFields
-//                
-//                let expected = Ok []
-//                
-//                Expect.equal result expected "Validated result"
-//            }
+
+            test "Validates list" {
+                let listValidator: Validator<string * ((string * string) list), _, string * ((string * string) list)> =
+                    Validator.from (fun (a: string) (b: (string * string) list) -> (a, b))
+                    |> (fun v -> Validator.apply v (Validator.Standard.text "id" |> Validator.isRequired |> Validator.initFrom fst))
+                    |> (fun v -> Validator.apply v ((Validator.withList "list" (complexValidator |> Validator.initFrom id) |> Validator.initFrom snd) |> Validator.initFrom snd))
+
+                let validator = listValidator
+                
+                let model = Form.initWithDefault validator ("hello world", [ "hello", "world" ])
+                                    
+                let result = Form.validate validator () model.FormFields
+                
+                let expected = Ok ("hello world", [ "hello", "world" ])
+                
+                Expect.equal result expected "Validated result"
+            }
+       
+            test "Validates invalid list" {
+                let listValidator: Validator<string * ((string * string) list), _, string * ((string * string) list)> =
+                    Validator.from (fun (a: string) (b: (string * string) list) -> (a, b))
+                    |> (fun v -> Validator.apply v (Validator.Standard.text "id" |> Validator.isRequired |> Validator.initFrom fst))
+                    |> (fun v -> Validator.apply v ((Validator.withList "list" (complexValidator |> Validator.initFrom id) |> Validator.initFrom snd) |> Validator.initFrom snd))
+                
+                let validator = listValidator
+                
+                let model = Form.initWithDefault validator ("hello", [ "", "world" ])
+                                    
+                let result = Form.validate validator () model.FormFields
+                
+                let expected = Error [("list[0].id", ["id is required"])]
+                
+                Expect.equal result expected "Validated result"
+            }
+
+            test "Add list item 1" {
+                let listValidator: Validator<string * ((string * string) list), _, string * ((string * string) list)> =
+                    Validator.from (fun (a: string) (b: (string * string) list) -> (a, b))
+                    |> (fun v -> Validator.apply v (Validator.Standard.text "id" |> Validator.isRequired |> Validator.initFrom fst))
+                    |> (fun v -> Validator.apply v ((Validator.withList "list" (complexValidator |> Validator.initFrom id) |> Validator.initFrom snd) |> Validator.initFrom snd))
+                
+                let validator = listValidator
+                
+                let model =
+                    Form.initWithDefault validator ("hello", [ ])
+                    |> Form.addListItem "list"
+                                    
+                let result = Form.validate validator () model.FormFields
+                
+                let expected = Error [
+                    ("list[0].id", ["id is required"])
+                    ("list[0].id2", ["id2 is required"])
+                ]
+                
+                Expect.equal result expected "Validated result"
+            }
+
+            test "Remove list item" {
+                let listValidator: Validator<string * ((string * string) list), _, string * ((string * string) list)> =
+                    Validator.from (fun (a: string) (b: (string * string) list) -> (a, b))
+                    |> (fun v -> Validator.apply v (Validator.Standard.text "id" |> Validator.isRequired |> Validator.initFrom fst))
+                    |> (fun v -> Validator.apply v ((Validator.withList "list" (complexValidator |> Validator.initFrom id) |> Validator.initFrom snd) |> Validator.initFrom snd))
+                
+                let validator = listValidator
+                
+                let model =
+                    Form.initWithDefault validator ("hello", [ ])
+                    |> Form.addListItem "list"
+                    |> Form.removeListItem "list" 0
+                                    
+                let result = Form.validate validator () model.FormFields
+                
+                let expected = Ok ("hello", [])
+                
+                Expect.equal result expected "Validated result"
+            }
         ]
     ]
