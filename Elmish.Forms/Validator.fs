@@ -68,8 +68,11 @@ let apply (vf: Validator<_, _, _>) (va: Validator<_, _, _>): Validator<_, _, _> 
         match (g1, g2) with
         | Field.Group g, Field.Leaf frs ->
             let rightId = Schema.getId va.Schema
-
             let map = Map.add rightId (Field.Leaf frs) g
+            Field.Group map
+        | Field.Group g, Field.List l ->
+            let rightId = Schema.getId va.Schema
+            let map = Map.add rightId (Field.List l) g
             Field.Group map
         | Field.Leaf fls, Field.Leaf frs ->
             let leftId = Schema.getId vf.Schema
@@ -96,7 +99,7 @@ let apply (vf: Validator<_, _, _>) (va: Validator<_, _, _>): Validator<_, _, _> 
             
         let hv2 =
             match va.InitFrom with
-            | Some hf1 -> (hf1 env) |> va.Serialize env None
+            | Some hf1 -> hf1 env |> va.Serialize env None
             | None -> va.Serialize env None None
         joinGroups hv1 hv2
 
@@ -159,29 +162,32 @@ let withSub (subId: FieldId) (validator: Validator<_, _, _>): Validator<_, _, _>
     }
     
 let withList (listId: FieldId) (validator: Validator<'a, _, _>): Validator<'a list, _, _> =
-    let serialize env (initSelector: InitSelector<_, _> option) (_: _ option) =
+    let serialize env (initSelector: InitSelector<_, _> option) (initValue: _ option) =
+        let serializeValue initValue =
+            let unpackField  (field: Field) =
+                match field with
+                | Field.Group gd -> gd
+                | Field.Leaf ld ->
+                    Map.ofList [ Schema.getId validator.Schema, Field.Leaf ld ]
+                | _ -> failwithf "Unsupported nesting %A" field
+            
+            initValue
+            |> List.map (fun value -> validator.Serialize value validator.InitFrom None)
+            |> List.map unpackField
+            |> Field.List
+            
         let defaultNode = Field.List []
+        
         match initSelector with
         | Some initSelector ->
-                match initSelector env with
-                | Some initValue ->
-                    let unpackField  (field: Field) =
-                        match field with
-                        | Field.Group gd -> gd
-                        | Field.Leaf ld ->
-                            Map.ofList [ Schema.getId validator.Schema, Field.Leaf ld ]
-                        | _ -> failwithf "Unsupported nesting %A" field
-                    
-                    initValue
-                    |> List.map (fun value -> validator.Serialize value validator.InitFrom None)
-                    |> List.map unpackField
-                    |> Field.List
-                    
-                | None ->
-                    defaultNode
+            match initSelector env with
+            | Some initValue -> serializeValue initValue
+            | None -> defaultNode
             
         | None ->
-            defaultNode      
+            match initValue with
+            | Some initValue -> serializeValue initValue
+            | None -> defaultNode      
     
     let validate: Validate<_, _> =
         fun formFields context ->
@@ -207,7 +213,7 @@ let withList (listId: FieldId) (validator: Validator<'a, _, _>): Validator<'a li
                     Error errors
                     
             field
-            |> List.mapi (fun index f -> runValidationForIndex index f)
+            |> List.mapi (runValidationForIndex)
             |> Result.traverse    
     
     {

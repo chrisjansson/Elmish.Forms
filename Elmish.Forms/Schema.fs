@@ -82,23 +82,34 @@ let withType (t: string) (schema: SchemaField) =
     | SchemaField.List _ -> schema
         
 let rec getDefaultForSchema (schema: SchemaField) =
+    let flattenList (field: Field) =
+        match field with
+        | Field.Group map ->
+            let item = 
+                Map.toList map
+                |> List.map snd
+                |> List.item 0
+            match item with
+            | Field.List _ -> item
+            | _ -> field
+        | _ -> field
+    
     match schema with
     | SchemaField.Leaf l ->
         let defaultValue =
             l.Default
             |> Option.defaultValue ""
-        
         Field.Leaf (FieldState.String (defaultValue, { IsTouched = false }))
     | SchemaField.Type t ->
          t.Fields
          |> Map.toList
-         |> List.map (fun (id, field) -> id, getDefaultForSchema field)
+         |> List.map (fun (id, field) -> id, (getDefaultForSchema field |> flattenList))
          |> Map.ofList
          |> Field.Group
     | SchemaField.Group g ->
          g.Fields
          |> Map.toList
-         |> List.map (fun (id, field) -> id, getDefaultForSchema field)
+         |> List.map (fun (id, field) -> id, (getDefaultForSchema field |> flattenList))
          |> Map.ofList
          |> Field.Group
     | SchemaField.Sub s ->
