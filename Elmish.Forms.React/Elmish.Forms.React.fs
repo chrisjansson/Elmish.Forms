@@ -139,6 +139,7 @@ type FormProps<'Result, 'b, 'c> =
     {
         Validator: Validator<'Result, 'b, 'c>
         InitValue: 'c option
+        OnChange: Result<'Result, ValidationErrors> -> unit
         OnSubmit: Result<'Result, ValidationErrors> -> unit
     }
     
@@ -160,7 +161,10 @@ type FormComponent<'Result, 'c>(props) as x=
             | Ok _ -> Map.empty
             | Error errors -> Map.ofList errors
         
-        { model with Errors = errors }, result
+        let returnResult = { model with Errors = errors }, result
+        props.OnChange result
+        returnResult
+        
     
     do
         let model: FormState =

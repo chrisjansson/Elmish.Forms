@@ -156,5 +156,8 @@ let getSchemaFromPath (path: FieldId) (model: Model) =
             | SchemaField.Type g, (Path.Node head)::tail ->
                 let schema = Map.find head g.Fields
                 inner tail schema
+            | SchemaField.Type g, (Path.List (head, _))::tail ->
+                let schema = Map.find head g.Fields
+                inner pathParts schema
             | _ -> failwithf "Invalid schema path %A actual: %A" path schema
     inner path model.Schema
