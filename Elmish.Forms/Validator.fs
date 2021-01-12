@@ -1,5 +1,7 @@
 module Elmish.Forms.Validator
 
+open System.Text.RegularExpressions
+
 let inline from (f: 'T): Validator<'T, 'Env, 'InitFrom> =
     let validate _ (_: Context<'Env>) =
         Ok f
@@ -564,4 +566,47 @@ module Standard =
     and tryParseDecimal (s: string) =
         match System.Decimal.TryParse(s) with
         | true, i -> Some i
+        | _ -> None
+        
+    let rec asDate (validator: Validator<string option, _, _>): Validator<System.DateTime option, _, _> =
+        let validate (s: string) =
+            match tryParseDate s with
+            | Some i -> Ok i
+            | None -> Error (fun label -> [ sprintf "%s should be a valid date yyyy-mm-dd" label ])
+        
+        let serialize (v: System.DateTime) =
+            v.ToString("yyyy-MM-dd")
+        
+        bindValidateO
+            "date"
+            validate
+            serialize
+            validator
+        
+    and tryParseDate (s: string) = tryParseYYYYMMDD s
+
+    and matchesDateRegex s =
+        let regex = Regex.Match(s, "^(\d{4})-(\d{2})-(\d{2})$")
+        
+        if not regex.Success then
+            None
+        else
+            if regex.Groups.Count = 4 then
+                Some (System.Int32.Parse(regex.Groups.[1].Value), System.Int32.Parse(regex.Groups.[2].Value), System.Int32.Parse(regex.Groups.[3].Value))
+            else
+                None
+                
+    (* Parse datetime of format yyyy-mm-dd *)
+    and tryParseYYYYMMDD (s: string) =
+        match matchesDateRegex s with
+        | Some (yyyy, mm, dd) ->
+            (* DateTimes are backed by JS.Date in Fable
+            * this means even though 2018-01-40 is an invalid date it is allowed in JS
+            * It means treat the overflow as addition and move the date forward instead of treating it as an error
+            * Here we simply guard against this behavior *)
+            let date = System.DateTime.Parse(s)
+            if date.Year = yyyy && date.Month = mm && date.Day = dd then
+                Some date
+            else
+                None
         | _ -> None
