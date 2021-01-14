@@ -88,39 +88,28 @@ let useField (id: FieldId) =
     }
     
     
-type ListPrefixProps =
-    {
-        Id: FieldId
-        Render: (unit -> unit) -> Fable.React.ReactElement
-    }
+[<ReactComponent>] 
+let WithListPrefix' (id: FieldId, render: (unit -> unit) -> Fable.React.ReactElement) =
+    let prefix = usePrefix ()
+    let prefixedId =
+        if prefix = "" then
+            id
+        else
+            sprintf "%s.%s" prefix id
+            
+    let form = useForm ()
+    let listLength = form.GetListLength prefixedId
     
-let withListPrefix' =
-    React.functionComponent (fun (props: ListPrefixProps) ->
-        let id = props.Id
-        let render = props.Render
-        
-        let prefix = usePrefix ()
-        let prefixedId =
-            if prefix = "" then
-                id
-            else
-                sprintf "%s.%s" prefix id
-                
-        printfn "%A" prefixedId
-        let form = useForm ()
-        let listLength = form.GetListLength prefixedId
-        
-        React.fragment [
-            for i = 0 to (listLength - 1) do
-                
-                let removeItem () =
-                    form.RemoveListItem prefixedId i
-                
-                prefixContextProvider (sprintf "%s[%i]." prefixedId i) (render removeItem)
-        ]
-    )
+    React.fragment [
+        for i = 0 to (listLength - 1) do
+            
+            let removeItem () =
+                form.RemoveListItem prefixedId i
+            
+            prefixContextProvider (sprintf "%s[%i]." prefixedId i) (render removeItem)
+    ]
     
-let withListPrefix (id: FieldId) (render: _ -> Fable.React.ReactElement) = withListPrefix' { Id = id; Render = render }
+let withListPrefix (id: FieldId) (render: _ -> Fable.React.ReactElement) = WithListPrefix' (id, render)
     
     
 let useList (id: FieldId): ListContext =
