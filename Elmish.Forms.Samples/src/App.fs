@@ -61,7 +61,7 @@ let form () =
             setModel({ model with Submitted = Some resultString })
         
         React.fragment [
-            React.form { Validator = props.Validator; OnSubmit = onSubmit; InitValue = None } [ renderForm { Render = props.Render } ]
+            React.form { Validator = props.Validator; OnSubmit = onSubmit; InitValue = None; OnChange = ignore } [ renderForm { Render = props.Render } ]
             if model.Submitted.IsSome then
                 match model.Submitted.Value with
                 | Ok r ->
