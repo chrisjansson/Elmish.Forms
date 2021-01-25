@@ -17,8 +17,7 @@
         <Compile Include="Validator.fs"/>
         <Compile Include="Library.fs"/>
     </ItemGroup>
-
-    <ItemGroup>
+    <ItemGroup Condition=" '$(Configuration)|' == 'Release' ">
         <Content Include="*.fsproj; **\*.fs" PackagePath="fable\"/>
     </ItemGroup>
 

@@ -15,7 +15,7 @@
         <PackageReference Include="Feliz" Version="1.32.0" />
     </ItemGroup>
 
-    <ItemGroup>
+    <ItemGroup Condition=" '$(Configuration)|' == 'Release' ">
         <Content Include="*.fsproj; **\*.fs" PackagePath="fable\" />
     </ItemGroup>
 
