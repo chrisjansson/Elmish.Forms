@@ -20,6 +20,7 @@ type FormContext =
         GetListLength: FieldId -> int
         IsInvalid: bool
         IsSubmitted: bool
+        IsDirty: bool
     }
 and ListContext =
     {
@@ -135,6 +136,7 @@ type FormProps<'Result, 'b, 'c> =
 type FormState =
     {
         Model: Model
+        StartModel: Model option
         Errors: Map<FieldId, string list>
         NotShownErrors: Set<FieldId>
         IsSubmitted: bool
@@ -150,18 +152,29 @@ type FormComponent<'Result, 'c>(props) as x=
             | Ok _ -> Map.empty
             | Error errors -> Map.ofList errors
         
-        let returnResult = { model with Errors = errors }, result
+        let startModel =
+            match model.StartModel with
+            | None -> None
+            | Some m ->
+                if m <> model.Model then
+                    None
+                else
+                    Some m
+        
+        let returnResult = { model with Errors = errors; StartModel = startModel }, result
         props.OnChange result
         returnResult
-        
     
     do
         let model: FormState =
+            let model =
+                match props.InitValue with
+                | Some v -> Form.initWithDefault props.Validator v
+                | None -> Form.init props.Validator
+            
             {
-                Model =
-                    match props.InitValue with
-                    | Some v -> Form.initWithDefault props.Validator v
-                    | None -> Form.init props.Validator
+                Model = model
+                StartModel = Some model
                 Errors = Map.empty
                 NotShownErrors = Set.empty
                 IsSubmitted = false
@@ -285,6 +298,10 @@ type FormComponent<'Result, 'c>(props) as x=
                 GetListLength = fun id -> Form.getListLength id model.Model
                 IsInvalid = not (Map.isEmpty model.Errors)
                 IsSubmitted = model.IsSubmitted
+                IsDirty =
+                    match model.StartModel with
+                    | None -> true
+                    | Some _ -> false
             }
 
         Html.div [
