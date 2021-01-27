@@ -5,8 +5,8 @@
     </PropertyGroup>
 
     <PropertyGroup>
-      <PackageId>Elmish.Forms</PackageId>
-      <Version>0.1</Version>
+      <PackageId>Cj.Forms</PackageId>
+      <Version>0.1.1</Version>
     </PropertyGroup>
   
     <ItemGroup>
@@ -17,7 +17,7 @@
         <Compile Include="Validator.fs"/>
         <Compile Include="Library.fs"/>
     </ItemGroup>
-    <ItemGroup Condition=" '$(Configuration)|' == 'Release' ">
+    <ItemGroup Condition="'$(Configuration)' == 'Release'">
         <Content Include="*.fsproj; **\*.fs" PackagePath="fable\"/>
     </ItemGroup>
 

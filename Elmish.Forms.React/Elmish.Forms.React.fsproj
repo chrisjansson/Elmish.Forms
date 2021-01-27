@@ -5,17 +5,18 @@
     </PropertyGroup>
 
     <PropertyGroup>
-        <PackageId>Elmish.Forms.React</PackageId>
-        <Version>0.1</Version>
+        <PackageId>Cj.Forms.React</PackageId>
+        <Version>0.1.1</Version>
     </PropertyGroup>
 
     <ItemGroup>
+        <PackageReference Include="Cj.Forms" Version="0.1.0" />
         <PackageReference Include="Fable.Browser.Dom" Version="2.2.0" />
         <PackageReference Include="Fable.Core" Version="3.2.3" />
         <PackageReference Include="Feliz" Version="1.32.0" />
     </ItemGroup>
 
-    <ItemGroup Condition=" '$(Configuration)|' == 'Release' ">
+    <ItemGroup Condition="'$(Configuration)' == 'Release'">
         <Content Include="*.fsproj; **\*.fs" PackagePath="fable\" />
     </ItemGroup>
 
@@ -23,9 +24,4 @@
         <Compile Include="Elmish.Forms.React.fs" />
         <Compile Include="Elmish.Forms.Gui.fs" />
     </ItemGroup>
-
-    <ItemGroup>
-      <ProjectReference Include="..\Elmish.Forms\Elmish.Forms.fsproj" />
-    </ItemGroup>
-
 </Project>
