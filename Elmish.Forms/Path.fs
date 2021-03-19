@@ -4,7 +4,7 @@ module Elmish.Forms.Path
 open System.Text.RegularExpressions
 
 let private tryParseListAccess node =
-    let r = Regex("(.+)\[([0-9+])\]")
+    let r = Regex("(.+)\[([0-9]+)\]")
     let matches = r.Matches(node)
     if matches.Count = 0 then
         None

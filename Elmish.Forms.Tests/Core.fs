@@ -10,7 +10,18 @@ let tests =
     testList "Core properties" [
         let textValidator = Validator.Standard.text "fieldId"
         let secondValidator = Validator.Standard.text "fieldId2"
-        
+
+        test "Can parse list path" {
+            let result = Elmish.Forms.Path.parse "list[0]"
+            
+            Expect.equal [ Path.List ("list", 0) ] result "Single digit index list parse"
+            
+            let result = Elmish.Forms.Path.parse "list[10]"
+            
+            Expect.equal [ Path.List ("list", 10) ] result "Multi digit index list parse"
+
+        }
+                
         test "Can add label to schema meta data" {
             let validator = Validator.withLabel "a label" textValidator
             
@@ -462,6 +473,18 @@ let tests =
                 let result = Form.validate validator () model.FormFields
                 
                 let expected = Ok ([ "hello"; "world" ])
+                
+                Expect.equal result expected "Validated result"
+            }
+            
+            test "Validates long list" {
+                let validator = Validator.withList "texts" (textValidator |> Validator.initFrom (fun x -> x)) |> Validator.initFrom (fun x -> x)
+                
+                let model = Form.initWithDefault validator [ "1"; "2"; "3"; "4"; "5"; "6"; "7"; "8"; "9"; "10"; "11"; "12" ]
+                                    
+                let result = Form.validate validator () model.FormFields
+                
+                let expected = Ok ([ "1"; "2"; "3"; "4"; "5"; "6"; "7"; "8"; "9"; "10"; "11"; "12" ])
                 
                 Expect.equal result expected "Validated result"
             }
