@@ -163,8 +163,56 @@ let withSub (subId: FieldId) (validator: Validator<_, _, _>): Validator<_, _, _>
       Serialize = serialize
     }
     
-let withList (listId: FieldId) (validator: Validator<'a, _, _>): Validator<'a list, _, _> =
-    let serialize env (initSelector: InitSelector<_, _> option) (initValue: _ option) =
+let withList<'Result, 'env, 'InitFrom> (listId: FieldId) (validator: Validator<'Result, 'env, 'InitFrom>): Validator<'Result list, 'env, 'InitFrom list> =
+//    let serialize (initFrom: 'InitFrom list) (initSelector: InitSelector<'InitFrom, 'Result> option) (initValue: _ option) =
+//        let serializeValue initValue =
+//            let unpackField  (field: Field) =
+//                match field with
+//                | Field.Group gd -> gd
+//                | Field.Leaf ld ->
+//                    Map.ofList [ Schema.getId validator.Schema, Field.Leaf ld ]
+//                | _ -> failwithf "Unsupported nesting %A" field
+//            
+//            initValue
+//            |> List.map (fun value -> validator.Serialize value validator.InitFrom None)
+//            |> List.map unpackField
+//            |> Field.List
+//            
+//        let defaultNode = Field.List []
+//        
+//        match initSelector with
+//        | Some initSelector ->
+//            match initSelector env with
+//            | Some initValue -> serializeValue initValue
+//            | None -> defaultNode
+//            defaultNode
+//        | None ->
+//            match initValue with
+//            | Some initValue -> serializeValue initValue
+//            | None -> defaultNode      
+//
+    
+    
+//        Serialize = fun env initSelector (value: 'a option) ->
+//            let valueToSerialize =
+//                match initSelector with
+//                | Some initSelector ->
+//                    match initSelector env with
+//                    | Some v -> Some v
+//                    | None -> None
+//                | None ->
+//                    match value with
+//                    | Some v -> Some v
+//                    | None -> None
+//
+//            let serializedValue =
+//                match valueToSerialize with
+//                | Some v -> Some (Some v)
+//                | None -> Some None
+//                            
+//            validator.Serialize env None serializedValue
+    
+    let serialize (initFrom: 'InitFrom list) (initSelector: InitSelector<'InitFrom list, 'Result list> option) (initValue: ('Result list) option) =
         let serializeValue initValue =
             let unpackField  (field: Field) =
                 match field with
@@ -174,22 +222,38 @@ let withList (listId: FieldId) (validator: Validator<'a, _, _>): Validator<'a li
                 | _ -> failwithf "Unsupported nesting %A" field
             
             initValue
-            |> List.map (fun value -> validator.Serialize value validator.InitFrom None)
+            |> List.map (fun (initFrom, x) -> validator.Serialize initFrom validator.InitFrom x)
             |> List.map unpackField
             |> Field.List
             
         let defaultNode = Field.List []
         
-        match initSelector with
-        | Some initSelector ->
-            match initSelector env with
-            | Some initValue -> serializeValue initValue
-            | None -> defaultNode
-            
-        | None ->
-            match initValue with
-            | Some initValue -> serializeValue initValue
-            | None -> defaultNode      
+        let valueToSerialize =
+            match initSelector with
+            | Some initSelector ->
+                match initSelector initFrom with
+                | Some v -> Some v
+                | None -> None
+            | None ->
+                match initValue with
+                | Some v -> Some v
+                | None -> None
+    
+        let valueToSerialize = 
+            match valueToSerialize with
+            | Some v -> List.zip initFrom v |> List.map (fun (x, y) -> x, Some y)
+            | None -> initFrom |> List.map (fun x -> x, None)
+    
+        serializeValue valueToSerialize
+//        match initSelector with
+//        | Some initSelector ->
+//            match initSelector initFrom with
+//            | Some initValue -> serializeValue initValue
+//            | None -> defaultNode
+//        | None ->
+//            match initValue with
+//            | Some initValue -> serializeValue initValue
+//            | None -> defaultNode     
     
     let validate: Validate<_, _> =
         fun formFields context ->
