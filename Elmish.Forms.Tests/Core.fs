@@ -4,6 +4,8 @@ module ElmishForms.Tests.CoreProperties
 open Elmish.Forms
 open Expecto
 
+type Item =
+    { A: string; B: string }
 
 [<Tests>]
 let tests =
@@ -768,10 +770,14 @@ let tests =
                 |> (fun v -> Validator.apply v textValidator)
                 |> (fun v -> Validator.apply v textValidator2)
                 
+            let testListValidator =
+                Validator.withList "list" complexValidator
+                |> Validator.mapInit (fun _ -> [])
+                
             let listValidator =
                 Validator.from (fun a b -> (a, b))
                 |> (fun v -> Validator.apply v textValidator)
-                |> (fun v -> Validator.apply v (Validator.withList "list" complexValidator))
+                |> (fun v -> Validator.apply v (Validator.withList "list" complexValidator |> Validator.mapInit (fun _ -> [])))
             
             test "Has correct schema" {
                 let validator = listValidator
@@ -805,12 +811,10 @@ let tests =
             }
 
             test "Initializes list from data" {
-                
-                                
                 let listValidator: Validator<string * ((string * string) list), _, string * ((string * string) list)> =
                     Validator.from (fun (a: string) (b: (string * string) list) -> (a, b))
                     |> (fun v -> Validator.apply v (Validator.Standard.text "id" |> Validator.isRequired |> Validator.initFrom fst))
-                    |> (fun v -> Validator.apply v ((Validator.withList "list" (complexValidator |> Validator.initFrom id) |> Validator.initFrom snd) |> Validator.initFrom snd))
+                    |> (fun v -> Validator.apply v ((Validator.withList "list" (complexValidator |> Validator.initFrom id) |> Validator.mapInit snd) |> Validator.initFrom snd))
 
                 let validator = listValidator
                 
@@ -827,12 +831,36 @@ let tests =
                                     
                 Expect.equal model.FormFields expected "Default initialized list"
             }
+            
+            test "Initializes list from data different type data" {
+                let complexValidatorFromItem =
+                    complexValidator
+                    |> Validator.mapInit (fun (x: Item) -> x.A, x.B)
+                
+                let listValidator: Validator<((string * string) list), _, (string * Item list)> =
+                    Validator.from (fun (a: (string * string) list) -> a)
+                    |> (fun v -> Validator.apply v ((Validator.withList "list" (complexValidatorFromItem) |> Validator.mapInit snd)))
+
+                let validator = listValidator
+                
+                let expected =
+                    [
+                        "list", Field.List [
+                            Map.ofList [ "id", Field.Leaf (FieldState.String ("hello", { IsTouched = false }))
+                                         "id2", Field.Leaf (FieldState.String ("world", { IsTouched = false })) ]
+                        ]
+                    ] |> Map.ofList
+                
+                let model = Form.initWithDefault validator ("junk", [ { A = "hello"; B = "world" } ])
+                                    
+                Expect.equal model.FormFields expected "Default initialized list"
+            }
 
             test "Validates list" {
                 let listValidator: Validator<string * ((string * string) list), _, string * ((string * string) list)> =
                     Validator.from (fun (a: string) (b: (string * string) list) -> (a, b))
                     |> (fun v -> Validator.apply v (Validator.Standard.text "id" |> Validator.isRequired |> Validator.initFrom fst))
-                    |> (fun v -> Validator.apply v ((Validator.withList "list" (complexValidator |> Validator.initFrom id) |> Validator.initFrom snd) |> Validator.initFrom snd))
+                    |> (fun v -> Validator.apply v ((Validator.withList "list" (complexValidator |> Validator.initFrom id) |> Validator.mapInit snd) |> Validator.initFrom snd))
 
                 let validator = listValidator
                 
@@ -849,7 +877,7 @@ let tests =
                 let listValidator: Validator<string * ((string * string) list), _, string * ((string * string) list)> =
                     Validator.from (fun (a: string) (b: (string * string) list) -> (a, b))
                     |> (fun v -> Validator.apply v (Validator.Standard.text "id" |> Validator.isRequired |> Validator.initFrom fst))
-                    |> (fun v -> Validator.apply v ((Validator.withList "list" (complexValidator |> Validator.initFrom id) |> Validator.initFrom snd) |> Validator.initFrom snd))
+                    |> (fun v -> Validator.apply v ((Validator.withList "list" (complexValidator |> Validator.initFrom id) |> Validator.mapInit snd) |> Validator.initFrom snd))
                 
                 let validator = listValidator
                 
@@ -866,7 +894,7 @@ let tests =
                 let listValidator: Validator<string * ((string * string) list), _, string * ((string * string) list)> =
                     Validator.from (fun (a: string) (b: (string * string) list) -> (a, b))
                     |> (fun v -> Validator.apply v (Validator.Standard.text "id" |> Validator.isRequired |> Validator.initFrom fst))
-                    |> (fun v -> Validator.apply v ((Validator.withList "list" (complexValidator |> Validator.initFrom id) |> Validator.initFrom snd) |> Validator.initFrom snd))
+                    |> (fun v -> Validator.apply v ((Validator.withList "list" (complexValidator |> Validator.initFrom id) |> Validator.mapInit snd) |> Validator.initFrom snd))
                 
                 let validator = listValidator
                 
@@ -888,7 +916,7 @@ let tests =
                 let listValidator: Validator<string * ((string * string) list), _, string * ((string * string) list)> =
                     Validator.from (fun (a: string) (b: (string * string) list) -> (a, b))
                     |> (fun v -> Validator.apply v (Validator.Standard.text "id" |> Validator.isRequired |> Validator.initFrom fst))
-                    |> (fun v -> Validator.apply v ((Validator.withList "list" (complexValidator |> Validator.initFrom id) |> Validator.initFrom snd) |> Validator.initFrom snd))
+                    |> (fun v -> Validator.apply v ((Validator.withList "list" (complexValidator |> Validator.initFrom id) |> Validator.mapInit snd) |> Validator.initFrom snd))
                 
                 let validator = listValidator
                 
