@@ -86,7 +86,7 @@ and ValidationErrors = KeyedValidationError list
 and ValidationErrorContext = unit
 and Validate<'Result, 'Env> = FormFields -> Context<'Env> -> ValidationResult<'Result>
 and Context<'Env> = { Env: 'Env; Schema: SchemaField }
-and InitSelector<'Env, 'Result> = ('Env -> 'Result option)
+and InitSelector<'InitializeFrom, 'Result> = ('InitializeFrom -> 'Result option)
 and Validator<'Result, 'Env, 'InitializeFrom> =
     {
         Validate: Validate<'Result, 'Env>
