@@ -2,6 +2,7 @@
 
     <PropertyGroup>
         <TargetFramework>netstandard2.0</TargetFramework>
+        <PackageVersion>0.1.4</PackageVersion>
     </PropertyGroup>
 
     <PropertyGroup>
@@ -10,15 +11,15 @@
     </PropertyGroup>
   
     <ItemGroup>
-        <Compile Include="Extensions.fs"/>
-        <Compile Include="Types.fs"/>
-        <Compile Include="Path.fs"/>
-        <Compile Include="Schema.fs"/>
-        <Compile Include="Validator.fs"/>
-        <Compile Include="Library.fs"/>
+        <Compile Include="Extensions.fs" />
+        <Compile Include="Types.fs" />
+        <Compile Include="Path.fs" />
+        <Compile Include="Schema.fs" />
+        <Compile Include="Validator.fs" />
+        <Compile Include="Library.fs" />
     </ItemGroup>
     <ItemGroup Condition="'$(Configuration)' == 'Release'">
-        <Content Include="*.fsproj; **\*.fs" PackagePath="fable\"/>
+        <Content Include="*.fsproj; **\*.fs" PackagePath="fable\" />
     </ItemGroup>
 
 </Project>
