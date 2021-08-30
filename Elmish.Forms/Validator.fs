@@ -531,7 +531,10 @@ module Standard =
         match System.Int32.TryParse(s) with
         | true, i -> Some i
         | _ -> None
-        
+    and tryParseBool (s: string) =
+        match System.Boolean.TryParse(s) with
+        | true, i -> Some i
+        | _ -> None
         
     let rec asGuid (validator: Validator<string option, _, _>): Validator<System.Guid option, _, _> =
         let validate (s: string) =
@@ -547,6 +550,22 @@ module Standard =
             validate
             serialize
             validator
+        
+    and asBool (validator: Validator<string option, _, _>): Validator<bool option, _, _> =
+        let validate (s: string) =
+            match tryParseBool s with
+            | Some i -> Ok i
+            | None -> Error (fun label -> [ sprintf "%s should be a valid boolean" label ])
+        
+        let serialize (v: bool) =
+            string v
+        
+        bindValidateO
+            "bool"
+            validate
+            serialize
+            validator
+        
         
     and tryParseGuid (s: string) =
         match System.Guid.TryParse(s) with
