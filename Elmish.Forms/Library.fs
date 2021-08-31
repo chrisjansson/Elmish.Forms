@@ -167,7 +167,7 @@ module Form =
                 | _ -> failwithf "Expected to find list %A" fullPath
             | head::tail ->
                 match head with
-                | Path.List (_, index) ->
+                | Path.List (listName, index) ->
                     match fields with
                     | Field.List l ->
                         let modify node =
@@ -176,6 +176,11 @@ module Form =
                             | _ -> failwith "Must return group"
                         List.modifyI modify index l
                         |> Field.List
+                    | Field.Group g ->
+                        g
+                        |> Map.find listName
+                        |> (fun f -> Map.add listName (setRecursive pathParts f) g)
+                        |> Field.Group
                     | _ -> failwithf "Invalid path %s, %A" fullPath fields
                 | Path.Node head -> 
                     match fields with
@@ -216,7 +221,7 @@ module Form =
                 | _ -> failwithf "Expected to find list %A" fullPath
             | head::tail ->
                 match head with
-                | Path.List (_, index) ->
+                | Path.List (listName, index) ->
                     match fields with
                     | Field.List l ->
                         let modify node =
@@ -225,6 +230,11 @@ module Form =
                             | _ -> failwith "Must return group"
                         List.modifyI modify index l
                         |> Field.List
+                    | Field.Group g ->
+                        g
+                        |> Map.find listName
+                        |> (fun f -> Map.add listName (setRecursive pathParts f) g)
+                        |> Field.Group
                     | _ -> failwithf "Invalid path %s, %A" fullPath fields
                 | Path.Node head -> 
                     match fields with

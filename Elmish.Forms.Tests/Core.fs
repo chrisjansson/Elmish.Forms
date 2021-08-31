@@ -2,6 +2,7 @@ module ElmishForms.Tests.CoreProperties
 
 
 open Elmish.Forms
+open Elmish.Forms.Validator
 open Expecto
 
 type Item =
@@ -22,6 +23,12 @@ let tests =
             
             Expect.equal [ Path.List ("list", 10) ] result "Multi digit index list parse"
 
+        }
+        
+        test "Can parse nested list path" {
+            let result = Elmish.Forms.Path.parse "list[0].nestedList[2]"
+            
+            Expect.equal [ Path.List ("list", 0); Path.List ("nestedList", 2) ] result "Single digit index list parse"
         }
                 
         test "Can add label to schema meta data" {
@@ -548,6 +555,101 @@ let tests =
             }
         ]
         
+        testList "List of text nested list validator" [
+            let textValidator = Validator.Standard.text "id" |> Validator.isRequired
+            
+            test "Has correct schema" {
+                let nestedValidator = Validator.withList "nestedTexts" textValidator
+                let validator = Validator.withList "texts" nestedValidator
+                
+                let expected =
+                    SchemaField.List { Id = "texts"; SubSchema = nestedValidator.Schema }
+                    
+                Expect.equal validator.Schema expected "Nested list schema"
+            }
+            test "Default initializes list" {
+                let nestedValidator = Validator.withList "nestedTexts" textValidator
+                let validator = Validator.withList "texts" nestedValidator
+                
+                let expected =
+                    [
+                        "texts", Field.List [ ]
+                    ] |> Map.ofList
+                
+                let model = Form.init validator
+                                    
+                Expect.equal model.FormFields expected "Default initialized list"
+            }
+            
+            test "Initializes list from data" {
+                let nestedValidator =
+                    Validator.from (fun x y -> y)
+                    |> (fun x -> apply x (Standard.text "junk"))
+                    |> (fun x -> apply x (withList "nestedTexts" textValidator |> Validator.initFrom (fun x -> x)))
+                let validator = Validator.withList "texts" nestedValidator |> Validator.initFrom (fun x -> x)
+                
+                let expected =
+                    [
+                        "texts", Field.List [
+                            Map.ofList [
+                                "junk", Field.Leaf (FieldState.String ("", { IsTouched = false }))
+                                "nestedTexts", Field.List [
+                                    Map.ofList [ "id", Field.Leaf (FieldState.String ("hello", { IsTouched = false })) ]
+                                    Map.ofList [ "id", Field.Leaf (FieldState.String ("world", { IsTouched = false })) ]
+                            ] ]
+                            Map.ofList [
+                                "junk", Field.Leaf (FieldState.String ("", { IsTouched = false }))
+                                "nestedTexts", Field.List [
+                                    Map.ofList [ "id", Field.Leaf (FieldState.String ("foo", { IsTouched = false })) ]
+                                    Map.ofList [ "id", Field.Leaf (FieldState.String ("bar", { IsTouched = false })) ]
+                            ] ]
+                        ]
+                    ] |> Map.ofList
+                
+                let model = Form.initWithDefault validator [ [ "hello"; "world"]; ["foo"; "bar"] ]
+                                    
+                Expect.equal model.FormFields expected "Default initialized list"
+            }
+
+            
+            test "Remove list item" {
+                let nestedValidator =
+                    Validator.from (fun x y -> y)
+                    |> (fun x -> apply x (Standard.text "junk"))
+                    |> (fun x -> apply x (withList "nestedTexts" textValidator |> Validator.initFrom (fun x -> x)))
+                let validator = Validator.withList "texts" nestedValidator |> Validator.initFrom (fun x -> x)
+                
+                let model =
+                    Form.initWithDefault validator [ [ "hello"; "world"]; ["foo"; "bar"] ]
+                    |> Form.removeListItem "texts[0].nestedTexts" 0
+                                    
+                let result = Form.validate validator () model.FormFields
+                
+                let expected = Ok [ [ "world"]; ["foo"; "bar"] ]
+                
+                Expect.equal result expected "Validated result"
+            }
+            
+            test "Add list item" {
+                let nestedValidator =
+                    Validator.from (fun x y -> y)
+                    |> (fun x -> apply x (Standard.text "junk"))
+                    |> (fun x -> apply x (withList "nestedTexts" textValidator |> Validator.initFrom (fun x -> x)))
+                let validator = Validator.withList "texts" nestedValidator |> Validator.initFrom (fun x -> x)
+                
+                let model =
+                    Form.initWithDefault validator [ [ "hello"; "world"]; ["foo"; "bar"] ]
+                    |> Form.addListItem "texts[1].nestedTexts"
+                    |> Form.setField "texts[1].nestedTexts[2].id" "buz"
+                                    
+                let result = Form.validate validator () model.FormFields
+                
+                let expected = Ok [ [ "hello"; "world"]; ["foo"; "bar"; "buz"] ]
+                
+                Expect.equal result expected "Validated result"
+            }
+        ]
+        
         testList "List of complex validator" [
             let textValidator = Validator.Standard.text "id" |> Validator.isRequired |> Validator.initFrom (fun (a, _) -> a)
             let textValidator2 = Validator.Standard.text "id2" |> Validator.isRequired |> Validator.initFrom (fun (_, b) -> b)
@@ -842,7 +944,7 @@ let tests =
                     |> (fun v -> Validator.apply v ((Validator.withList "list" (complexValidatorFromItem) |> Validator.mapInit snd)))
 
                 let validator = listValidator
-                
+
                 let expected =
                     [
                         "list", Field.List [

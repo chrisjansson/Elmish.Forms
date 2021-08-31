@@ -2,12 +2,12 @@
 
     <PropertyGroup>
         <TargetFramework>netstandard2.0</TargetFramework>
-        <PackageVersion>0.1.4</PackageVersion>
+        <PackageVersion>0.1.8</PackageVersion>
     </PropertyGroup>
 
     <PropertyGroup>
       <PackageId>Cj.Forms</PackageId>
-      <Version>0.1.3</Version>
+      <Version>0.1.8</Version>
     </PropertyGroup>
   
     <ItemGroup>

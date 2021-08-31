@@ -635,3 +635,17 @@ module Standard =
             else
                 None
         | _ -> None
+        
+    let asEnum (encode: 'Enum -> string) (decode: string -> 'Enum) (validator: Validator<string option, _, _>): Validator<'Enum option, _, _> =
+        let validate (s: string) =
+            decode s
+            |> Ok
+
+        let serialize (v: 'Enum) =
+            encode v
+        
+        bindValidateO
+            "enum"
+            validate
+            serialize
+            validator
